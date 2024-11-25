@@ -1,0 +1,866 @@
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+<div x-data :class="$store.darkMode && 'bg-black'" class="h-full pb-5">
+    <div class="h-full">
+        <div class="tab-wrapper container mx-auto px-4" x-data="fetchProducts()">
+            <div>
+                <div class="flex justify-between">
+                    <div class="flex pt-5 mb-5">
+                        <label @click="activeTab = 0" class="tab-control bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer" :class="{ 'active': activeTab === 0 }">Products</label>                           
+                        <label @click="activeTab = 1" class="tab-control bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer" :class="{ 'active': activeTab === 1 }">
+                            <div class="relative">
+                                <p id="cart-label" class="absolute -right-4 -top-4 w-4 h-4 text-sm rounded flex justify-center items-center text-white rounded-[50px] w-[20px] h-[20px] border-2 border-solid border-blue-900 left-[unset] bg-blue-900" x-show="cart.length > 0" x-text="cart.reduce((total, item) => total + item.quantity, 0)"></p>
+                            </div> 
+                            Cart</label>
+                        <label @click="activeTab = 2" class="tab-control bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer" :class="{ 'active': activeTab === 2 }">Checkout</label>                
+                    </div>
+                    <div class="pt-5 mb-5">
+                        <button x-data @click="$store.darkMode = ! $store.darkMode" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer h-[42px]">Toggle Dark Mode</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-panel" x-show.transition.in.opacity.duration.600="activeTab === 0" x-init="fetchJSONData()" x-transition:enter.duration.500ms x-transition:leave.duration.300ms>
+            <p :class="$store.darkMode && 'text-white'"></p>  
+
+            <div class="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-4">
+                <div>
+                     <!-- Active Filters Section -->
+                     <!-- <div x-show="selectedColors.length > 0 || selectedSizes.length > 0 || onSale || minprice !== min || maxprice !== max || searchQuery.length > 0" class="mb-4 p-4 bg-white border border-gray-200 rounded shadow">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-semibold mb-2">Active Filters:</h4>
+                            <button @click="clearAllFilters" class="text-red-500 text-sm">Clear All</button>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            Search Query Filter -->
+                            <!-- <div x-show="searchQuery.length > 0" class="bg-gray-200 px-3 py-1 rounded-full text-sm flex items-center">
+                                <span x-text="'Search: ' + searchQuery" class="mr-2"></span>
+                                <button @click="searchQuery = ''" class="text-red-500">&times;</button>
+                            </div> -->
+                            <!-- Color Filters -->
+                            <!-- <template x-for="color in selectedColors" :key="color">
+                                <div class="bg-gray-200 px-3 py-1 rounded-full text-sm flex items-center">
+                                    <span x-text="getColorName(color)" class="mr-2"></span>
+                                    <button @click="removeColorFilter(color)" class="text-red-500">&times;</button>
+                                </div>
+                            </template> -->
+                            <!-- Size Filters -->
+                            <!-- <template x-for="size in selectedSizes" :key="size">
+                                <div class="bg-gray-200 px-3 py-1 rounded-full text-sm flex items-center">
+                                    <span x-text="getSizeName(size)" class="mr-2"></span>
+                                    <button @click="removeSizeFilter(size)" class="text-red-500">&times;</button>
+                                </div>
+                            </template> -->
+                            <!-- Price Filter -->
+                            <!-- <div x-show="minprice !== min || maxprice !== max" class="bg-gray-200 px-3 py-1 rounded-full text-sm flex items-center">
+                                <span>Price: $<span x-text="minprice"></span> - $<span x-text="maxprice"></span></span>
+                                <button @click="resetPriceFilter" class="text-red-500 ml-2">&times;</button>
+                            </div> -->
+                            <!-- Sale Filter -->
+                            <!-- <div x-show="onSale" class="bg-gray-200 px-3 py-1 rounded-full text-sm flex items-center">
+                                <span>On Sale</span>
+                                <button @click="onSale = false" class="text-red-500 ml-2">&times;</button>
+                            </div>
+                        </div> -->
+                    <!-- </div> -->
+
+                    <div class="mb-4 p-4 bg-white border border-gray-200 rounded shadow">
+                        <div class="mb-4">
+                            <h4 class="font-bold mb-2">Active Filters:</h4>
+                            <div class="flex flex-wrap">
+                                <template x-if="searchQuery">
+                                    <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                        Search: <strong x-text="searchQuery"></strong>
+                                        <button @click="removeFilter('searchQuery')" class="ml-2 text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                                <template x-for="colorId in selectedColors" :key="colorId">
+                                    <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                        Color: <strong x-text="customColorMapping[colorId]"></strong>
+                                        <button @click="removeFilter('selectedColors', colorId)" class="ml-2 text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                                <template x-for="sizeId in selectedSizes" :key="sizeId">
+                                    <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                        Size: <strong x-text="customSizeMapping[sizeId]"></strong>
+                                        <button @click="removeFilter('selectedSizes', sizeId)" class="ml-2 text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                                <template x-if="priceMin">
+                                    <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                        Min Price: <strong x-text="priceMin"></strong>
+                                        <button @click="removeFilter('priceMin')" class="ml-2 text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                                <template x-if="priceMax">
+                                    <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                        Max Price: <strong x-text="priceMax"></strong>
+                                        <button @click="removeFilter('priceMax')" class="ml-2 text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                                <template x-if="hasActiveFilters()">
+                                    <span class="bg-red-200 text-red-800 p-2 rounded mr-2 mb-2 cursor-pointer" @click="removeAllFilters">Remove All Filters</span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form class="bg-white">
+                        <h3 class="font-bold text-lg p-3">Filters</h3>      
+                        
+                        <div class="border-b border-gray-200 py-1 px-4">
+                            <label for="searchFilter" class="block text-sm font-medium text-gray-700">Search by Name or SKU</label>
+                            <input id="searchFilter" type="text" x-model="searchQuery" @input="applyFilters" placeholder="Search..." class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        </div> 
+            
+                        <div class="border-b border-gray-200 py-1 px-4" x-data="dropdown()">
+                            <button type="button" class="flex w-full items-center justify-between bg-white py-3 text-sm text-gray-400 hover:text-gray-500 focus:outline-none"  @click="toggle">
+                              <span class="font-medium text-gray-900 ml-3">Color</span>                          
+                            </button>
+                          <div class="pt-2 pb-2" x-show="open">
+                            <div class="space-y-4 px-3 flex flex-wrap">
+                                <!-- <template x-for="item in colors" :key="item.id">                                                              
+                                    <div class="">
+                                        <label class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer flex items-center">
+                                            <input id="filter-color-0" name="color" x-model="selectedColors" :value="item.id" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 hidden">
+                                            <span class="text-sm text-gray-600" x-text="item.name"></span>
+                                        </label>
+                                    </div>
+                                </template> -->
+                                
+                                <template x-for="(colorName, colorId) in customColorMapping" :key="colorId">
+                                    <div class="">
+                                        <label class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer flex items-center">
+                                            <input type="checkbox" :value="colorId" x-model="selectedColors" @change="applyFilters" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 hidden">
+                                            <span class="text-sm text-gray-600" x-text="colorName"></span>
+                                        </label>
+                                    </div>
+                                </template>
+                            </div>
+                          </div>
+                        </div>                                   
+                        <div class="border-b border-gray-200 py-1 px-4" x-data="dropdown()">
+                            <button type="button" class="flex w-full items-center justify-between bg-white py-3 text-sm text-gray-400 hover:text-gray-500 focus:outline-none" @click="toggle">
+                              <span class="font-medium text-gray-900 ml-3">Size</span>
+                            </button>
+                          <div class="pt-4 pb-2" x-show="open">
+                            <div class="space-y-4 px-3 flex flex-wrap">
+                                <!-- <template x-for="item in sizes" :key="item.id">                                                              
+                                    <div class="">
+                                        <label class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer flex items-center">
+                                            <input id="filter-size-0" name="size" x-model="selectedSizes" :value="item.id" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 hidden">
+                                            <span class="text-sm text-gray-600" x-text="item.name"></span>
+                                        </label>
+                                    </div>
+                                </template>   -->
+
+                                <template x-for="(sizeName, sizeId) in customSizeMapping" :key="sizeId">
+                                    <div class="">
+                                        <label class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer flex items-center">
+                                            <input type="checkbox" :value="sizeId" x-model="selectedSizes" @change="applyFilters" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 hidden">
+                                            <span class="text-sm text-gray-600" x-text="sizeName"></span>
+                                        </label>
+                                    </div>
+                                </template>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="border-b border-gray-200 py-1 px-4" x-data="dropdown()">
+                            <button type="button" class="flex w-full items-center justify-between bg-white py-3 text-sm text-gray-400 hover:text-gray-500 focus:outline-none" @click="toggle">
+                                <span class="font-medium text-gray-900 ml-3">Price</span>
+                            </button>
+
+                            <div x-show="open">
+                                <div class="relative max-w-xl w-full">
+                                    <div>
+                                        <input type="range" step="100" x-bind:min="min" x-bind:max="max" x-on:input="mintrigger" x-model="minprice" class="absolute pointer-events-none appearance-none z-20 h-2 w-full opacity-0 cursor-pointer">
+                                        <input type="range" step="100" x-bind:min="min" x-bind:max="max" x-on:input="maxtrigger" x-model="maxprice" class="absolute pointer-events-none appearance-none z-20 h-2 w-full opacity-0 cursor-pointer">
+                                        <div class="relative z-10 h-2">
+                                            <div class="absolute z-10 left-0 right-0 bottom-0 top-0 rounded-md bg-gray-200"></div>
+                                            <div class="absolute z-20 top-0 bottom-0 rounded-md bg-blue-600" x-bind:style="'right:'+maxthumb+'%; left:'+minthumb+'%'"></div>
+                                            <div class="absolute z-30 w-6 h-6 top-0 left-0 bg-blue-600 rounded-full -mt-2" x-bind:style="'left: '+minthumb+'%'"></div>
+                                            <div class="absolute z-30 w-6 h-6 top-0 right-0 bg-blue-600 rounded-full -mt-2" x-bind:style="'right: '+maxthumb+'%'"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-5 space-x-4 text-sm text-gray-700">
+                                        <div>
+                                            <input type="text" maxlength="5" x-on:input.debounce="mintrigger" x-model="minprice" class="w-24 px-3 py-2 text-center border border-gray-200 rounded-lg bg-gray-50 focus:border-yellow-400 focus:outline-none">
+                                        </div>
+                                        <div>
+                                            <input type="text" maxlength="5" x-on:input.debounce.300="maxtrigger" x-model="maxprice" class="w-24 px-3 py-2 text-center border border-gray-200 rounded-lg bg-gray-50 focus:border-yellow-400 focus:outline-none">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-b border-gray-200 py-1 px-4" x-data="dropdown()">
+                            <button type="button" class="flex w-full items-center justify-between bg-white py-3 text-sm text-gray-400 hover:text-gray-500 focus:outline-none" @click="toggle">
+                              <span class="font-medium text-gray-900 ml-3">Sale</span>
+                            </button>
+                          <div class="pt-4 pb-2" x-show="open">
+                            <div class="space-y-4 px-3">                                                                                         
+                                    <div class="flex items-center"> 
+                                     <label class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer">
+                                            <input type="checkbox" x-model="onSale" class="hidden">
+                                            <span class="mr-1 text-sm text-gray-600">Sale</span>  
+                                        </label>                                   
+                                    </div>                            
+                            </div>
+                          </div>
+                        </div>
+                    </form>
+                </div>
+               
+                <div class="lg:col-span-3">
+                    <div>
+                        <div class="">
+                            <p class="font-bold text-2xl uppercase my-6" :class="$store.darkMode && 'text-white'">Product List</p>                            
+
+                            <div x-data="fetchProducts()">
+                                <p x-show="loading">Loading...</p>
+                                
+                                <div x-show="!loading && filteredProducts.length > 0">
+                                    <div :class="gridView ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'">
+                                        <template x-for="product in filteredProducts" :key="product.id">    
+                                                <div :class="gridView ? 'border p-4 rounded bg-white shadow' : 'flex border p-4 rounded bg-white shadow'"> 
+                                                    <div class="">
+                                                        <div>
+                                                            <!-- <div>
+                                                                <img :src="product.image" alt="Product Image" />
+                                                            </div>
+                                                            <div>                        
+                                                                <h3 class="text-lg font-bold" x-text="product.name"></h3>
+                                                                <p><span>SKU:</span><span x-text="product.sku"></span></p>
+                                                                <p><span>Color:</span><span x-text="product.customColorName"></span></p>
+                                                            </div> -->
+                                                                    <!-- <div>
+                                                                        <img :src="product.image" alt="Product Image" class="object-cover w-full max-w-lg"/>
+                                                                    </div>
+                                                                    <h3 class="text-lg font-bold" x-text="product.name"></h3>
+                                                                    <div class="flex mt-2">
+                                                                        <span class="font-bold w-12">Price:</span>
+                                                                        <span class="font-bold">$</span>
+                                                                        <span class="font-bold" x-text="product.price"></span>
+                                                                    </div> -->
+                                                                    <!-- <p x-show="!gridView" x-text="product.description" class="text-sm text-gray-600 mt-2"></p> -->
+                                                                    <div class="flex mt-2">
+                                                                        <span class="w-12 font-medium">SKU:</span>
+                                                                        <span x-text="product.sku"></span>
+                                                                    </div>
+                                                                    <div class="flex">
+                                                                        <span class="w-12 font-medium">Color:</span>
+                                                                        <span x-text="product.customColorName"></span>
+                                                                    </div>
+                                                                    <div class="flex">
+                                                                        <span class="w-12 font-medium">Size:</span>
+                                                                        <span x-text="product.customSizeName"></span>
+                                                                    </div>
+                                                                    <div>                                               
+                                                                        <button @click="addToCart(product)" class="uppercase font-semibold tracking-wide bg-blue-100 text-blue-700 px-4 py-2 rounded-lg mt-2 focus:outline-none hover:bg-blue-200">Add to Cart</button>
+                                                                    </div>
+                                                        </div>
+                                                    </div>
+                                                </div>                
+                                        </template>
+
+
+
+                                        <!-- <div :class="gridView ? 'border p-4 rounded bg-white shadow' : 'flex border p-4 rounded bg-white shadow'">
+                                        <template x-for="product in filteredProducts" :key="product.id">
+                                                <div class="">
+                                                    <div>
+                                                        <img :src="product.image" alt="Product Image" class="object-cover w-full max-w-lg" />
+                                                    </div>
+                                                    <h3 class="text-lg font-bold" x-text="product.name"></h3>
+                                                    <div class="flex mt-2">
+                                                        <span class="font-bold w-12">Price:</span>
+                                                        <span class="font-bold">$</span>
+                                                        <span class="font-bold" x-text="product.price"></span>
+                                                    </div>
+                                                    <div class="flex mt-2">
+                                                        <span class="w-12 font-medium">SKU:</span>
+                                                        <span x-text="product.sku"></span>
+                                                    </div>
+                                                    <div class="flex">
+                                                        <span class="w-12 font-medium">Color:</span>
+                                                        <span x-text="product.customColorName"></span>
+                                                    </div>
+                                                    <div class="flex">
+                                                        <span class="w-12 font-medium">Size:</span>
+                                                        <span x-text="product.customSizeName"></span>
+                                                    </div>
+                                                    <div>
+                                                        <button @click="addToCart(product)" class="uppercase font-semibold tracking-wide bg-blue-100 text-blue-700 px-4 py-2 rounded-lg mt-2 focus:outline-none hover:bg-blue-200">Add to Cart</button>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div> -->
+                                    </div>
+                                </div>                                          
+                
+                                <p x-show="!loading && products.length === 0">No products found.</p>
+                            </div>
+                        </div> 
+                    </div>
+                </div>
+            </div>
+
+
+            
+            
+           
+           
+            <div class="tab-panel" :class="{ 'active': activeTab === 1 }" x-show.transition.in.opacity.duration.600="activeTab === 1" x-transition:enter.duration.600ms x-transition:leave.duration.300ms>
+            <p :class="$store.darkMode && 'text-white'">The cart tab’s example content.</p>
+            </div>
+    
+            <div class="tab-panel" :class="{ 'active': activeTab === 2 }" x-show.transition.in.opacity.duration.600="activeTab === 2" x-transition:enter.duration.700ms x-transition:leave.duration.200ms>
+                <p :class="$store.darkMode && 'text-white'">The checkout tab’s example content.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+   
+
+
+
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('dropdown', () => ({
+                open: false,
+                toggle() {
+                    this.open = !this.open;
+                }
+            }));
+
+            Alpine.store('darkMode', false);
+
+            Alpine.data('searchFilterCombo', () => ({
+                activeTab: 0,
+                search: '',
+                searchQuery: '',
+                noResults: false,
+                selectedColors: [],
+                selectedSizes: [],
+                minprice: 0,
+                maxprice: 1000,
+                min: 0,
+                max: 1000,
+                onSale: false,
+                products: [],
+                sizes: [],
+                colors: [],
+                sortOrder: 'default',
+                gridView: true,                
+                cart: Alpine.$persist([]).as('cart'),
+                couponCode: '',
+                couponDiscount: 0,
+                couponError: false,
+
+                fetchJSONData() {
+                    fetch('./example.json', {
+                        headers: {
+                            'Authorization': 'Bearer 3pigh4vzytofsf316wg4rf628v3c6wev',
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                        .then((res) => {
+                            if (!res.ok) {
+                                throw new Error(`HTTP error! Status: ${res.status}`);
+                            }
+                            return res.json();
+                        })
+                        .then((data) => {                        
+                            data.products.forEach(product => {
+                                product.quantity = 1;
+                            });
+                            this.products = data.products;
+                            this.colors = data.colors;
+                            this.sizes = data.sizes;
+                        })
+                        .catch((error) => console.error("Unable to fetch data:", error));
+                },
+
+                // fetchProducts() {
+                //     fetch('http://10.0.101.114/mayur-patel/pub/rest/V1/products?searchCriteria[pageSize]=10', {
+                //         headers: {
+                //             'Authorization': 'Bearer 3pigh4vzytofsf316wg4rf628v3c6wev',
+                //             'Content-Type': 'application/json'
+                //         }
+                //     })
+                //     .then(response => response.json())
+                //     .then(data => {
+                //         this.products = data.items;
+                //         console.log(this.products);
+                //     })
+                //     .catch(error => {
+                //         console.error('Error fetching products:', error);
+                //     });
+                // },
+
+                filteredProducts() {
+                    const filtered = this.products.filter((product) => {
+                        const matchesColor = this.selectedColors.length === 0 || this.selectedColors.includes(product.color);
+                        const matchesSize = this.selectedSizes.length === 0 || this.selectedSizes.includes(product.size);
+                        const matchesPrice = product.price >= this.minprice && product.price <= this.maxprice;
+                        const matchesSale = !this.onSale || (this.onSale && product.onSale);
+                        const matchesSearchQuery = this.searchQuery === '' || product.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || product.sku.toLowerCase().includes(this.searchQuery.toLowerCase());
+
+                        return matchesColor && matchesSize && matchesPrice && matchesSale && matchesSearchQuery;
+                    });
+
+                    this.noResults = filtered.length === 0;
+                    return filtered;
+                },
+
+                sortedProducts() {
+                    let products = this.filteredProducts();
+                    switch (this.sortOrder) {
+                        case 'name-asc':
+                            products.sort((a, b) => a.name.localeCompare(b.name));
+                            break;
+                        case 'name-desc':
+                            products.sort((a, b) => b.name.localeCompare(a.name));
+                            break;
+                        case 'price-asc':
+                            products.sort((a, b) => a.price - b.price);
+                            break;
+                        case 'price-desc':
+                            products.sort((a, b) => b.price - a.price);
+                            break;
+                        default:
+                            break;
+                    }
+                    return products;
+                },
+                removeCouponCode() {
+                    this.couponCode = '';
+                    this.couponDiscount = 0;
+                    this.couponError = false;
+                },
+                getColorName(colorId) {
+                    const color = this.colors.find(c => c.id === colorId);
+                    return color ? color.name : 'Unknown';
+                },
+
+                getSizeName(sizeId) {
+                    const size = this.sizes.find(s => s.id === sizeId);
+                    return size ? size.name : 'Unknown';
+                },
+
+                removeColorFilter(color) {
+                    this.selectedColors = this.selectedColors.filter(c => c !== color);
+                },
+
+                removeSizeFilter(size) {
+                    this.selectedSizes = this.selectedSizes.filter(s => s !== size);
+                },
+
+                clearAllFilters() {
+                    this.selectedColors = [];
+                    this.selectedSizes = [];
+                    this.searchQuery = '';
+                    this.minprice = this.min;
+                    this.maxprice = this.max;
+                    this.onSale = false;
+
+                },
+
+                resetPriceFilter() {
+                    this.minprice = this.min;
+                    this.maxprice = this.max;
+                },
+
+                minthumb: 0,
+                maxthumb: 0,
+                mintrigger() {
+                    this.validation();
+                    this.minprice = Math.min(this.minprice, this.maxprice - 500);
+                    this.minthumb = ((this.minprice - this.min) / (this.max - this.min)) * 100;
+                },
+                maxtrigger() {
+                    this.validation();
+                    this.maxprice = Math.max(this.maxprice, this.minprice + 150);
+                    this.maxthumb = 100 - (((this.maxprice - this.min) / (this.max - this.min)) * 100);
+                },
+
+                addToCart(product) {
+                    const existingProduct = this.cart.find(item => item.sku === product.sku);
+                    if (existingProduct) {
+                        existingProduct.quantity += 1;
+                    } else {
+                        this.cart.push({...product});
+                    }                    
+                    this.updateCartLabel();
+                },
+
+                removeFromCart(index) {
+                    this.cart.splice(index, 1);
+                    this.updateCartLabel();
+                },
+
+                updateQuantity(index, newQuantity) {
+                    if (newQuantity <= 0) {
+                        this.removeFromCart(index);
+                    } else {
+                        this.cart[index].quantity = newQuantity;
+                    }
+                    this.updateCartLabel();
+                },
+                updateCart() {
+                    this.updateCartLabel();
+                },
+
+                updateCartLabel() {
+                    const element = document.querySelector('#cart-label');
+                    if(this.cart.length === 0) {
+                        element.classList.add("hidden");
+                    } else {
+                        element.classList.remove("hidden");
+                    }
+                    if (element) {
+                        element.textContent = this.cart.length;                        
+                    }
+                },
+
+                calculateSubtotal() {
+                    return this.cart.reduce((total, product) => total + product.price * product.quantity, 0);
+                },
+
+                calculateTax() {
+                    return this.cart.reduce((total, product) => {
+                        if (product.sku === 'TEST2') {
+                            return total + product.price * product.quantity * 0.1;
+                        }
+                        return total;
+                    }, 0);
+                },
+
+                calculateColorDiscount() {
+                    return this.cart.reduce((total, product) => {
+                        if (['yellow', 'green'].includes(this.getColorName(product.color).toLowerCase())) {
+                            return total + product.price * product.quantity * 0.05;
+                        }
+                        return total;
+                    }, 0);
+                },
+
+                calculateGrandTotal() {
+                    const subtotal = this.calculateSubtotal();
+                    const tax = this.calculateTax();
+                    const colorDiscount = this.calculateColorDiscount();
+                    return subtotal + tax - colorDiscount - this.couponDiscount;
+                },
+
+                applyCouponCode() {
+                    if (this.couponCode === 'FLAT10') {
+                        this.couponDiscount = this.calculateSubtotal() * 0.1;
+                        this.couponError = false;
+                    } else if (this.couponCode === 'FLAT20') {
+                        this.couponDiscount = this.calculateSubtotal() * 0.2;
+                        this.couponError = false;
+                    } else if (this.couponCode === 'FLAT50') {
+                        this.couponDiscount = 50;
+                        this.couponError = false;
+                    } else {
+                        this.couponDiscount = 0;
+                        this.couponError = true;
+                    }
+                },
+                
+                validation() {
+                    if (/^\d*$/.test(this.minprice)) {
+                        if (this.minprice > this.max) {
+                            this.minprice = 950;
+                        }
+                        if (this.minprice < this.min) {
+                            this.minprice = this.min;
+                        }
+                    } else {
+                        this.minprice = 0;
+                    }
+                    if (/^\d*$/.test(this.maxprice)) {
+                        if (this.maxprice > this.max) {
+                            this.maxprice = this.max;
+                        }
+                        if (this.maxprice < this.min) {
+                            this.maxprice = 150;
+                        }
+                    } else {
+                        this.maxprice = 1000;
+                    }
+                }
+            }));
+        });   
+        
+        // function fetchProducts() {
+        //     return {
+        //         loading: true,
+        //         products: [],
+        //         gridView: true, 
+        //         searchQuery: '',               
+        //         categoryId: 41, // Replace with your category ID
+        //         baseUrl: 'http://10.0.101.114/mayur-patel/pub/', // Replace with your Magento base URL
+        //         token: '3pigh4vzytofsf316wg4rf628v3c6wev', // Replace with your OAuth token or integration token
+        //         customColorMapping: {
+        //             // Replace these with your actual custom color ID-to-name mappings
+        //             212: 'Black',
+        //             213: 'Red',
+        //             214: 'Green',
+        //             215: 'yellow',
+        //         },
+        //         customSizeMapping: {
+        //             // Replace these with your actual custom size ID-to-name mappings
+        //             166: 'XS',
+        //             167: 'S',                    
+        //             168: 'L',
+        //             169: 'M',
+        //             170: 'XL',
+        //             171: 'XXL',
+        //             172: 'XXXL'
+        //         },
+
+        //         init() {
+        //             this.getProductsByCategory();
+        //         },
+
+        //         async getProductsByCategory() {
+        //             try {
+        //                 const categoryUrl = `${this.baseUrl}/rest/V1/categories/${this.categoryId}/products`;
+        //                 const categoryResponse = await fetch(categoryUrl, {
+        //                     headers: {
+        //                         'Authorization': `Bearer ${this.token}`
+        //                     }
+        //                 });
+        //                 const productSkus = await categoryResponse.json();
+        //                 console.log('Product SKUs:', productSkus); // Debugging line
+        //                 await this.fetchProductDetails(productSkus);
+        //             } catch (error) {
+        //                 console.error('Error fetching products by category:', error);
+        //             }
+        //         },
+
+        //         async fetchProductDetails(productSkus) {
+        //             try {
+        //                 const productDetails = await Promise.all(productSkus.map(async (product) => {
+        //                     const productUrl = `${this.baseUrl}/rest/V1/products/${product.sku}`;
+        //                     const productResponse = await fetch(productUrl, {
+        //                         headers: {
+        //                             'Authorization': `Bearer ${this.token}`
+        //                         }
+        //                     });
+        //                     const productDetail = await productResponse.json();
+        //                     console.log('Product Detail:', productDetail); // Debugging line
+                            
+        //                     return {                                
+        //                         id: productDetail.id,
+        //                         price: productDetail.price,                                
+        //                         name: productDetail.name,
+        //                         sku: productDetail.sku,
+        //                         image: this.getProductImageUrl(productDetail),
+        //                         customColorName: this.getCustomColorName(productDetail),
+        //                         customSizeName: this.getCustomSizeName(productDetail)
+        //                     };
+        //                 }));
+        //                 this.products = productDetails;
+        //                 console.log('Product Details:', this.products); // Debugging line
+        //             } catch (error) {
+        //                 console.error('Error fetching product details:', error);
+        //             } finally {
+        //                 this.loading = false;
+        //             }
+        //         },
+
+        //         getProductImageUrl(productDetail) {
+        //             const imagePath = productDetail.media_gallery_entries.length > 0 ? productDetail.media_gallery_entries[0].file : 'placeholder.jpg'; // Fallback to a placeholder image if no image is available
+        //             return `${this.baseUrl}media/catalog/product/cache/c7fe3448dd3a9867d76b4ef511ce9c2d${imagePath}`;
+        //         },
+
+        //         getCustomColorName(productDetail) {
+        //             const customColorAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'customcolor');
+        //             const customColorValue = customColorAttribute ? customColorAttribute.value : null;
+        //             return customColorValue ? this.customColorMapping[customColorValue] || 'Unknown Color' : 'N/A';
+        //         },
+
+        //         getCustomSizeName(productDetail) {
+        //             const customSizeAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'size');
+        //             const customSizeValue = customSizeAttribute ? customSizeAttribute.value : null;
+        //             return customSizeValue ? this.customSizeMapping[customSizeValue] || 'Unknown Size' : 'N/A';
+        //         }
+        //     }
+        // }
+
+
+
+
+        function fetchProducts() {
+            return {
+                loading: true,
+                activeTab: 0,
+                products: [],
+                filteredProducts: [],
+                gridView: true,
+                searchQuery: '',
+                selectedColors: [],
+                selectedSizes: [],
+                priceMin: 0,
+                priceMax: 1000,
+                categoryId: 41,
+                baseUrl: 'http://10.0.101.114/mayur-patel/pub/',
+                token: '3pigh4vzytofsf316wg4rf628v3c6wev',
+                customColorMapping: {
+                    212: 'Black',
+                    213: 'Red',
+                    214: 'Green',
+                    215: 'Yellow',
+                },
+                customSizeMapping: {
+                    166: 'XS',
+                    167: 'S',
+                    168: 'L',
+                    169: 'M',
+                    170: 'XL',
+                    171: 'XXL',
+                    172: 'XXXL'
+                },
+
+                init() {
+                    this.getProductsByCategory();
+                },
+
+                async getProductsByCategory() {
+                    try {
+                        const categoryUrl = `${this.baseUrl}/rest/V1/categories/${this.categoryId}/products`;
+                        const categoryResponse = await fetch(categoryUrl, {
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`
+                            }
+                        });
+                        const productSkus = await categoryResponse.json();
+                        await this.fetchProductDetails(productSkus);
+                    } catch (error) {
+                        console.error('Error fetching products by category:', error);
+                    }
+                },
+
+                async fetchProductDetails(productSkus) {
+                    try {
+                        const productDetails = await Promise.all(productSkus.map(async (product) => {
+                            const productUrl = `${this.baseUrl}/rest/V1/products/${product.sku}`;
+                            const productResponse = await fetch(productUrl, {
+                                headers: {
+                                    'Authorization': `Bearer ${this.token}`
+                                }
+                            });
+                            const productDetail = await productResponse.json();
+                            return {
+                                id: productDetail.id,
+                                price: productDetail.price,
+                                name: productDetail.name,
+                                sku: productDetail.sku,
+                                image: this.getProductImageUrl(productDetail),
+                                customColorName: this.getCustomColorName(productDetail),
+                                customSizeName: this.getCustomSizeName(productDetail)
+                            };
+                        }));
+                        this.products = productDetails;
+                        this.filteredProducts = productDetails;
+                        this.applyFilters();
+                    } catch (error) {
+                        console.error('Error fetching product details:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                applyFilters() {
+                    this.filteredProducts = this.products.filter(product => {
+                        if (this.searchQuery && !product.name.toLowerCase().includes(this.searchQuery.toLowerCase()) && !product.sku.toLowerCase().includes(this.searchQuery.toLowerCase())) {
+                            return false;
+                        }
+                        if (this.selectedColors.length && !this.selectedColors.includes(Object.keys(this.customColorMapping).find(key => this.customColorMapping[key] === product.customColorName))) {
+                            return false;
+                        }
+                        if (this.selectedSizes.length && !this.selectedSizes.includes(Object.keys(this.customSizeMapping).find(key => this.customSizeMapping[key] === product.customSizeName))) {
+                            return false;
+                        }
+                        if (this.priceMin && product.price < this.priceMin) {
+                            return false;
+                        }
+                        if (this.priceMax && product.price > this.priceMax) {
+                            return false;
+                        }
+                        return true;
+                    });
+                },
+
+                removeFilter(filterKey, value = null) {
+                    if (value) {
+                        this[filterKey] = this[filterKey].filter(item => item !== value);
+                    } else {
+                        this[filterKey] = '';
+                    }
+                    this.applyFilters();
+                },
+
+                removeAllFilters() {
+                    this.searchQuery = '';
+                    this.selectedColors = [];
+                    this.selectedSizes = [];
+                    this.priceMin = 0;
+                    this.priceMax = 1000;
+                    this.applyFilters();
+                },
+
+                hasActiveFilters() {
+                    return this.searchQuery || this.selectedColors.length || this.selectedSizes.length || this.priceMin || this.priceMax;
+                },
+
+                getProductImageUrl(productDetail) {
+                    const imagePath = productDetail.media_gallery_entries.length > 0 ? productDetail.media_gallery_entries[0].file : 'placeholder.jpg';
+                    return `${this.baseUrl}media/catalog/product/cache/c7fe3448dd3a9867d76b4ef511ce9c2d${imagePath}`;
+                },
+
+                getCustomColorName(productDetail) {
+                    const customColorAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'customcolor');
+                    const customColorValue = customColorAttribute ? customColorAttribute.value : null;
+                    return customColorValue ? this.customColorMapping[customColorValue] || 'Unknown Color' : 'N/A';
+                },
+
+                getCustomSizeName(productDetail) {
+                    const customSizeAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'size');
+                    const customSizeValue = customSizeAttribute ? customSizeAttribute.value : null;
+                    return customSizeValue ? this.customSizeMapping[customSizeValue] || 'Unknown Size' : 'N/A';
+                },
+
+                addToCart(product) {
+                    // Implement your addToCart logic here
+                    console.log('Adding to cart:', product);
+                }
+            };
+        }
+    </script>
+
+
+<style>
+    .newdemo-index-index .columns {
+        display: block;
+    }
+    .newdemo-index-index .footer { 
+        display:none;
+    }
+</style>    
+
+
+
+
+
+

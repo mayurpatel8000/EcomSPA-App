@@ -1,0 +1,105 @@
+
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <div x-data="fetchProducts()">
+        <template x-if="loading">
+            <p>Loading...</p>
+        </template>
+        
+        <!-- <div>
+            <template x-if="!loading && products.length > 0">
+                <div>
+                    <template x-for="product in products" :key="product.id">
+                        <div>
+                            <p x-text="product.name"></p>
+                            <p x-text="product.sku"></p>                    
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div> -->
+
+        <template x-if="!loading && products.length > 0">
+            <ul>
+                <template x-for="product in products" :key="product.id">
+                    <li x-text="product.name"></li>
+                    <li x-text="product.price"></li>
+                    <li x-text="product.sku"></li>                    
+                </template>
+            </ul>
+        </template>
+        
+        <template x-if="!loading && products.length === 0">
+            <p>No products found.</p>
+        </template>
+    </div>
+
+  
+    <script>
+        function fetchProducts() {
+            return {
+                loading: true,
+                products: [],
+                categoryId: 41, // Replace with your category ID
+                baseUrl: 'http://10.0.101.114/mayur-patel/pub/', // Replace with your Magento base URL
+                token: '3pigh4vzytofsf316wg4rf628v3c6wev', // Replace with your OAuth token or integration token
+
+                init() {
+                    this.getProductsByCategory();
+                },
+
+                async getProductsByCategory() {
+                    try {
+                        const categoryUrl = `${this.baseUrl}/rest/V1/categories/${this.categoryId}/products`;
+                        const categoryResponse = await fetch(categoryUrl, {
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`
+                            }
+                        });
+                        const productSkus = await categoryResponse.json();
+                        await this.fetchProductDetails(productSkus);
+                    } catch (error) {
+                        console.error('Error fetching products by category:', error);
+                    }
+                },
+
+                async fetchProductDetails(productSkus) {
+                    try {
+                        const productDetails = await Promise.all(productSkus.map(async (product) => {
+                            const productUrl = `${this.baseUrl}/rest/V1/products/${product.sku}`;
+                            const productResponse = await fetch(productUrl, {
+                                headers: {
+                                    'Authorization': `Bearer ${this.token}`
+                                }
+                            });
+                            return productResponse.json();
+                        }));
+                        this.products = productDetails;
+                        console.log(this.products);
+                    } catch (error) {
+                        console.error('Error fetching product details:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

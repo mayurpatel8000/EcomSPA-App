@@ -1,0 +1,1520 @@
+<style>
+.modal {
+    display: none;    
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent background */   
+}
+.modal.show {
+    display: flex; /* Show when class 'show' is added */
+}
+</style>    
+   
+        <div x-data :class="$store.darkMode && 'bg-black'" class="h-full pb-5">
+            <div class="h-full">
+                <div x-data="fetchProducts()" class="flex">
+                    <div class="tab-wrapper container mx-auto px-4">    
+                    
+                        <div>
+                            <div class="flex justify-between">
+                                <div class="flex pt-5 mb-5">
+                                    <label @click="activeTab = 0" class="tab-control bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer" :class="{ 'active': activeTab === 0 }">Products</label>                           
+                                    <label @click="activeTab = 1" class="tab-control bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer" :class="{ 'active': activeTab === 1 }">
+                                        <div class="relative">
+                                            <p id="cart-label" class="absolute -right-4 -top-4 w-4 h-4 text-sm rounded flex justify-center items-center text-white rounded-[50px] w-[20px] h-[20px] border-2 border-solid border-blue-900 left-[unset] bg-blue-900" x-show="cart.length > 0" x-text="cart.reduce((total, item) => total + item.quantity, 0)"></p>
+                                        </div> 
+                                        Cart</label>                                   
+                                    <label @click="activeTab = 2" class="tab-control bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer" :class="{ 'active': activeTab === 2 }">Checkout</label>                
+                                </div>
+                                <div class="pt-5 mb-5">
+                                    <button x-data @click="$store.darkMode = ! $store.darkMode" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer h-[42px]">Toggle Dark Mode</button>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="tab-panel" x-show.transition.in.opacity.duration.600="activeTab === 0" x-init="fetchProducts()" x-transition:enter.duration.500ms x-transition:leave.duration.300ms>
+                                <div class="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-4">
+                                    <!-- Filter Section -->
+                                        <div>
+                                            <!-- Active Filters Section -->
+                                            <div class="mb-4 bg-white shadow p-2 py-3 border rounded">
+                                                <h4 class="font-bold mb-2">Active Filters:</h4>
+                                                    <div class="flex flex-wrap">
+                                                        <template x-if="searchQuery">
+                                                            <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                                                Search: <strong x-text="searchQuery"></strong>
+                                                                <button @click="removeFilter('searchQuery')" class="ml-2 text-red-600">&times;</button>
+                                                            </span>
+                                                        </template>
+                                                        <template x-if="showSaleOnly">
+                                                            <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                                                Sale Only
+                                                                <button @click="removeFilter('showSaleOnly')" class="ml-2 text-red-600">&times;</button>
+                                                            </span>
+                                                        </template>
+                                                        <template x-for="colorId in selectedColors" :key="colorId">
+                                                            <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                                                Color: <strong x-text="customColorMapping[colorId]"></strong>
+                                                                <button @click="removeFilter('selectedColors', colorId)" class="ml-2 text-red-600">&times;</button>
+                                                            </span>
+                                                        </template>
+                                                        <template x-for="sizeId in selectedSizes" :key="sizeId">
+                                                            <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                                                Size: <strong x-text="customSizeMapping[sizeId]"></strong>
+                                                                <button @click="removeFilter('selectedSizes', sizeId)" class="ml-2 text-red-600">&times;</button>
+                                                            </span>
+                                                        </template>
+
+                                                        <div x-show="minprice !== min || maxprice !== max" class="bg-gray-200 px-3 py-1 rounded-full text-sm flex items-center">
+                                                        <span>Price: $<span x-text="minprice"></span> - $<span x-text="maxprice"></span></span>
+                                                        <button @click="resetPriceFilter" class="text-red-500 ml-2">&times;</button>
+                                                        </div>
+                                                        
+                                                        
+                                                        <template x-if="hasActiveFilters()">
+                                                            <span class="bg-red-200 text-red-800 p-2 rounded mr-2 mb-2 cursor-pointer" @click="removeAllFilters">Remove All Filters</span>
+                                                        </template>
+                                                    </div>
+                                            </div>
+                                            <div class="bg-white shadow p-2 py-3 border rounded">                                    
+                                                <!-- Search Section -->
+                                                    <div class="mb-4">
+                                                        <label for="searchFilter" class="block font-bold mb-2">Search by Name or SKU:</label>
+                                                        <input id="searchFilter" type="text" x-model="searchQuery" @input="applyFilters" class="block w-full p-2 border rounded" placeholder="Search...">
+                                                    </div>
+                                                    <div class="mb-4">
+                                                        <label class="block font-bold mb-2">Filter by Sale:</label>
+                                                        <label class="block mr-4 mb-2">
+                                                            <input type="checkbox" x-model="showSaleOnly" @change="applyFilters" class="mr-2">
+                                                            <span>Show Sale Products Only</span>
+                                                        </label>
+                                                    </div>
+                                                <!-- Color Filter Section -->
+                                                    <div class="mb-4">
+                                                        <label class="block font-bold mb-2">Filter by Color:</label>
+                                                        <div class="flex flex-wrap">
+                                                            <template x-for="(colorName, colorId) in customColorMapping" :key="colorId">
+                                                                <label class="block mr-4 mb-2">
+                                                                    <input type="checkbox" :value="colorId" x-model="selectedColors" @change="applyFilters" class="mr-2">
+                                                                    <span x-text="colorName"></span>
+                                                                </label>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                <!-- Size Filter Section -->
+                                                    <div class="mb-4">
+                                                        <label class="block font-bold mb-2">Filter by Size:</label>
+                                                        <div class="flex flex-wrap">
+                                                            <template x-for="(sizeName, sizeId) in customSizeMapping" :key="sizeId">
+                                                                <label class="block mr-4 mb-2">
+                                                                    <input type="checkbox" :value="sizeId" x-model="selectedSizes" @change="applyFilters" class="mr-2">
+                                                                    <span x-text="sizeName"></span>
+                                                                </label>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                
+
+
+                                                
+                                                    <div class="range-slider">
+                                                            <input type="range" x-model="priceMin" @input="applyFilters" min="0" max="1000" step="10" value="1000">
+                                                            <input type="range" x-model="priceMax" @input="applyFilters" min="0" max="1000" step="10" value="50000">
+                                                    </div>
+                                                    <div class="flex justify-between mt-2">
+                                                            <span x-text="`$${priceMin}`"></span>
+                                                            <span x-text="`$${priceMax}`"></span>
+                                                    </div>
+                                            </div>
+                                        </div>
+                                    <!-- Product Listing Section -->
+                                        <div class="lg:col-span-3">    
+                                            
+                                            <p class="font-bold text-2xl uppercase my-6" :class="$store.darkMode && 'text-white'">Product List</p>
+                                            <div class="flex flex-wrap justify-between">
+                                                <!-- View Toggle Buttons -->
+                                                <div class="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <button @click="gridView = true" :class="gridView ? 'bg-gray-200' : 'bg-white'" class="px-4 py-2 border rounded-l-md">
+                                                            <!-- Grid Icon -->
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button @click="gridView = false" :class="!gridView ? 'bg-gray-200' : 'bg-white'" class="px-4 py-2 border rounded-r-md">
+                                                            <!-- List Icon -->
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>                                
+                                                </div>
+                    
+                                                <!-- Sort Dropdown -->
+                                                <div class="sort-by-section mb-4">
+                                                    <label for="sortBy" class="mr-2 font-semibold">Sort by:</label>
+                                                    <select id="sortBy" class="p-2 border border-gray-400 rounded w-[175px]" x-model="sortBy" @change="applySorting">
+                                                        <option value="">Select...</option>
+                                                        <option value="name-asc">Name: A to Z</option>
+                                                        <option value="name-desc">Name: Z to A</option>
+                                                        <option value="price-low-high">Price: Low to High</option>
+                                                        <option value="price-high-low">Price: High to Low</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        
+
+                                            <p x-show="loading">Loading...</p>
+
+                                            <div x-show="!loading && filteredProducts.length > 0">
+                                                <div :class="gridView ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'">
+                                                    <template x-for="product in filteredProducts" :key="product.id">
+                                                        <div :class="gridView ? 'border p-4 rounded bg-white shadow' : 'flex border p-4 rounded bg-white shadow'">
+                                                            <div class="">
+                                                                <div>
+                                                                    <img :src="product.image" alt="Product Image" class="object-cover w-full max-w-lg" />
+                                                                </div>
+                                                                <h3 class="text-lg font-bold" x-text="product.name"></h3>
+                                                                <div class="flex mt-2">
+                                                                    <span class="font-bold w-12">Price:</span>
+                                                                    <span class="font-bold">$</span>
+                                                                    <span class="font-bold" x-text="product.price"></span>
+                                                                </div>
+                                                                <div class="flex mt-2">
+                                                                    <span class="w-12 font-medium">SKU:</span>
+                                                                    <span x-text="product.sku"></span>
+                                                                </div>
+                                                                <div class="flex">
+                                                                    <span class="w-12 font-medium">Color:</span>
+                                                                    <span x-text="product.customColorName"></span>
+                                                                </div>
+                                                                <div class="flex">
+                                                                    <span class="w-12 font-medium">Size:</span>
+                                                                    <span x-text="product.customSizeName"></span>
+                                                                </div>
+                                                                <div>
+                                                                    <button @click="addToCart(product)" class="uppercase font-semibold tracking-wide bg-blue-100 text-blue-700 px-4 py-2 rounded-lg mt-2 focus:outline-none hover:bg-blue-200">Add to Cart</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+
+                                            <p x-show="!loading && filteredProducts.length === 0">No products found.</p>
+                                        </div>
+                                </div>
+                        </div>
+                        
+
+                        
+                        <div class="tab-panel" :class="{ 'active': activeTab === 1 }" x-show.transition.in.opacity.duration.600="activeTab === 1" x-transition:enter.duration.600ms x-transition:leave.duration.300ms>
+                            <div :class="$store.darkMode && 'text-white'">
+                                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                                        <!-- Cart Items Section -->
+                                        <div class="lg:col-span-3">
+                                            <h2 class="text-2xl font-bold mb-4" :class="$store.darkMode && 'text-white'">Cart</h2>
+                                            <div x-show="cart.length > 0">
+                                                <div :class="$store.darkMode && 'text-white'">
+                                                    <div class="flex justify-between">
+                                                        <div>
+                                                            <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize flex-1">item</h6>
+                                                        </div>
+                                                        <div>
+                                                            <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize w-[100px] text-center">price</h6>
+                                                        </div>
+                                                        <div>
+                                                            <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize w-[80px] text-center">qty</h6>
+                                                        </div>
+                                                        <div>
+                                                            <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize w-[130px] text-center">subtotal</h6>
+                                                        </div>
+                                                        <div>
+                                                            <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize w-[100px]">action</h6>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div x-show="cart.length > 0">
+                                                <div class="grid grid-cols-1 gap-4">
+                                                    <template x-for="(product, index) in cart" :key="index">
+                                                        <div class="border p-4 rounded bg-white shadow flex items-center justify-between">
+                                                            <div>
+                                                                <div>
+                                                                    <img :src="product.image" alt="Product image" class="w-16 h-16 object-cover">
+                                                                </div>
+                                                                <div>
+                                                                    <h3 class="text-lg font-bold mt-2" x-text="product.name"></h3>
+                                                                    <div class="flex">
+                                                                        <span class="w-12 font-medium">SKU:</span>
+                                                                        <span x-text="product.sku"></span>
+                                                                    </div>
+                                                                    <div class="flex">
+                                                                        <span class="w-12 font-medium">Color:</span>
+                                                                        <span x-text="product.customColorName"></span>
+                                                                    </div>
+                                                                    <div class="flex">
+                                                                        <span class="w-12 font-medium">Size:</span>
+                                                                        <span x-text="product.customSizeName"></span>
+                                                                    </div>
+                                                                </div>
+
+                                                            </div>
+
+                                                            <div class="text-center w-[100px]">
+                                                                <p class="text-gray-500" x-text="'$' + product.price"></p>                                        
+                                                            </div>
+                                                            <div class="w-[80px] text-center">
+                                                                <div class="flex items-center mt-2">                                            
+                                                                    <button @click="updateQuantity(index, product.quantity - 1)" class="px-2 w-[27px] pt-0 pb-1 text-white bg-blue-600 rounded">-</button>
+                                                                    <!-- <input class="mx-1 text-center border w-[35px] rounded pt-[3px] pb-1" :value="product.quantity"></input> -->
+                                                                    <input type="number" value="product.quantity" min="1" x-model.number="product.quantity" class="mx-1 w-[70px] text-center border border-gray-300 rounded" />
+                                                                    <button @click="updateQuantity(index, product.quantity + 1)" x-ref="button" class="px-2 w-[27px] pt-0 pb-1 text-white bg-blue-600 rounded">+</button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="w-[130px] text-center">
+                                                                <p class="mt-2 font-semibold">$<span x-text="(product.price * product.quantity).toFixed(2)"></span></p>
+                                                            </div>
+                                                            <div class="w-[84px] pl-2 text-center">
+                                                                <button @click="removeFromCart(index)" class="text-red-500">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                                </svg>                                          
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+
+                                                <div class="my-4">
+                                                    <label for="coupon-code" class="block text-sm font-medium text-gray-700" :class="$store.darkMode && 'text-white'">Coupon Code</label>
+                                                    <div class="flex mt-1">
+                                                        <input type="text" id="coupon-code" x-model="couponCode" class="w-52 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                                        <button @click="applyCouponCode" class="bg-blue-600 text-white px-4 py-2 rounded-r-md">Apply</button>
+                                                    </div>
+                                                    <div x-data x-show="couponDiscount > 0">
+                                                        <button @click="removeCouponCode" class="text-red-500 px-4 py-2">Remove Coupon</button>
+                                                    </div>
+                                                    <p x-show="couponError" class="text-red-500 text-sm mt-2">Invalid coupon code.</p>
+                                                </div>
+                                            </div>                    
+                                            <template x-if="cart.length === 0">
+                                                <p :class="$store.darkMode && 'text-white'">Your cart is empty.</p>
+                                            </template>
+                                        </div>
+                                        <!-- Order Summary Section -->
+                                        <div x-show="cart.length > 0">
+                                            <div class="border p-4 rounded bg-white shadow lg:col-span-1">
+                                                <h2 class="text-xl font-bold mb-4" :class="$store.darkMode && 'text-white'">Order Summary</h2>
+
+                                                <div class="flex justify-between font-semibold">
+                                                    <span :class="$store.darkMode && 'text-white'">Subtotal:</span>
+                                                    <span :class="$store.darkMode && 'text-white'" x-text="'$' + calculateSubtotal().toFixed(2)"></span>
+                                                </div>
+                                                <hr class="my-2">
+                                                <template x-if="calculateTax() > 0">
+                                                    <div class="flex justify-between font-semibold">                                
+                                                        <span class="flex flex-col"><span :class="$store.darkMode && 'text-white'">Tax:</span><span :class="$store.darkMode && 'text-white'">Sku: TEST2</span></span>
+                                                        <span :class="$store.darkMode && 'text-white'" x-text="'$' + calculateTax().toFixed(2)"></span>
+                                                    </div>
+                                                </template>
+                                                <hr class="my-2" x-show="calculateTax() > 0">
+                                                <template x-if="calculateColorDiscount() > 0">
+                                                    <div class="flex justify-between font-semibold">
+                                                        <span class="flex flex-col"><span :class="$store.darkMode && 'text-white'">Color Discount:</span><span id="selected_color" :class="$store.darkMode && 'text-white'">(Yellow/Green)</span></span>
+                                                        <span :class="$store.darkMode && 'text-white'" x-text="'-$' + calculateColorDiscount().toFixed(2)"></span>
+                                                    </div>
+                                                </template>
+                                                <hr class="my-2" x-show="calculateColorDiscount() > 0">
+                                                <div class="flex justify-between font-semibold" x-show="couponDiscount > 0">
+                                                    <div class="flex items-center">
+                                                        <span :class="$store.darkMode && 'text-white'">Coupon Discount:</span>
+                                                        <button :class="$store.darkMode && 'text-white'" @click="removeCouponCode" class="text-red-500 ml-2">Remove</button>
+                                                    </div>                            
+                                                    <span x-text="'-$' + couponDiscount.toFixed(2)"></span>
+                                                </div>                        
+                                                <hr class="my-2" x-show="couponDiscount > 0">
+                                                <div class="flex justify-between font-semibold">
+                                                    <span :class="$store.darkMode && 'text-white'">Grand Total:</span>
+                                                    <span :class="$store.darkMode && 'text-white'" x-text="'$' + calculateGrandTotal().toFixed(2)"></span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <button @click="processToCheckout" class="mt-4 p-2 bg-green-500 text-white rounded">
+                                                    Process to Checkout
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        
+                                </div>
+                            </div>
+                            
+                        </div>
+                
+                        <div class="tab-panel" :class="{ 'active': activeTab === 2 }" x-show.transition.in.opacity.duration.600="activeTab === 2" x-transition:enter.duration.700ms x-transition:leave.duration.200ms>
+                            <p :class="$store.darkMode && 'text-white'">
+                                
+                            </p>
+
+                            
+                            <div x-data="checkoutData()" class="container">
+                                <div x-data="fetchProducts()">    
+                                
+                                <div class="flex justify-between">
+                                    <div class="flex-[0_0_45%]">
+                                        
+                                        
+                                        <div x-data="addressForm()">
+                                <!-- Shipping Address Section -->
+                                <h2 class="text-xl font-bold mb-4 pb-2.5 border-b-black border-b border-solid" :class="$store.darkMode && 'text-white'">Shipping Address</h2>
+                                <div>
+                                    <!-- Existing Shipping Addresses with radio buttons -->
+                                    <template x-for="(address, index) in shippingAddresses" :key="index">
+                                        <div class="mb-2">
+                                            <input type="radio" :id="'shipping-' + index" :value="index" x-model="selectedShippingAddress">
+                                            <label class="font-medium" :for="'shipping-' + index" x-text="`${address.firstName} ${address.lastName}, ${address.address}`"></label>
+                                        </div>
+                                    </template>
+                            
+                                    <!-- Button to add new shipping address -->
+                                    <button class="text-white bg-blue-600 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-600 dark:focus:ring-blue-800" x-show="!showShippingForm" @click="toggleShippingForm()">Add New Shipping Address</button>
+                            
+                                    <!-- Shipping Address Form -->
+                                    <div x-show="showShippingForm" x-cloak>                        
+
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">First Name</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newShippingAddress.firstName" placeholder="First Name">
+                                        </div>
+
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Last Name</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newShippingAddress.lastName" placeholder="Last Name">
+                                        </div>    
+
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Address</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newShippingAddress.address" placeholder="Address">
+                                        </div>    
+
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">City</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newShippingAddress.city" placeholder="City">
+                                        </div>    
+
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Zip Code</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newShippingAddress.zip" placeholder="ZIP Code">
+                                        </div>    
+
+                                        <div class="mb-5">
+                                            <button class="text-white bg-blue-600 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-600 dark:focus:ring-blue-800" @click="addNewShippingAddress()">Save Billing Address</button>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            
+                                <!-- Billing Address Section -->
+                                <h2 class="text-xl font-bold mb-4 pb-2.5 border-b-black border-b border-solid mt-6" :class="$store.darkMode && 'text-white'">Billing Address</h2>
+                                <div>     
+                            
+                                    <!-- If "Same as Shipping" is checked, show the selected shipping address -->
+                                    <div x-show="sameAsShipping && selectedShippingAddress !== null" >
+                                            <input type="radio" checked>
+                                            <label class="font-medium" x-text="`${shippingAddresses[selectedShippingAddress].firstName} ${shippingAddresses[selectedShippingAddress].lastName}, ${shippingAddresses[selectedShippingAddress].address}`"></label>
+                                    </div>
+                            
+                                    <!-- Existing Billing Addresses with radio buttons -->
+                                    <template x-for="(address, index) in billingAddresses" :key="index">
+                                        <div class="mb-2">
+                                            <input type="radio" :id="'billing-' + index" :value="index" x-model="selectedBillingAddress">
+                                            <label class="font-medium" :for="'billing-' + index" x-text="`${address.firstName} ${address.lastName}, ${address.address}`"></label>
+                                        </div>
+                                    </template>
+                                    <div class="mb-2">
+                                        <input type="checkbox" id="sameAsShipping" x-model="sameAsShipping" @change="toggleSameAsShipping">
+                                        <label for="sameAsShipping">Same as shipping address</label>
+                                    </div>
+                            
+                                    <!-- Button to add new billing address -->
+                                    <button class="text-white bg-blue-600 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-600 dark:focus:ring-blue-800" x-show="!showBillingForm && !sameAsShipping" @click="toggleBillingForm()">Add New Billing Address</button>
+                            
+                                    <!-- Billing Address Form -->
+                                    <div x-show="showBillingForm && !sameAsShipping" x-cloak>
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">First Name</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newBillingAddress.firstName" placeholder="First Name">
+                                        </div>
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Last Name</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newBillingAddress.lastName" placeholder="Last Name">
+                                        </div>
+
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Address</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newBillingAddress.address" placeholder="Address">
+                                        </div>
+
+                                        <div class="mb-5"> 
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">City</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newBillingAddress.city" placeholder="City">
+                                        </div>
+
+                                        <div class="mb-5">
+                                            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Zip Code</label>
+                                            <input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" type="text" x-model="newBillingAddress.zip" placeholder="ZIP Code">
+                                        </div>
+                                        <div class="mb-5">
+                                            <button class="text-white bg-blue-600 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-600 dark:focus:ring-blue-800" @click="addNewBillingAddress()">Save Billing Address</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal fixed w-full h-full justify-center items-center z-[9999999] left-0 top-0" :class="modalVisible ? 'show' : 'invisible'">
+                                        <div class="modal-content fixed top-50 overflow-y-auto w-full max-w-[500px] border p-5 rounded-[10px] border-solid border-transparent bg-white">
+                                            <div class="flex justify-between pb-[15px] border-b-[#ccc] border-b border-solid align-center mb-4">
+                                                <h3 class="text-xl font-bold mb-0">Order Summary</h3>
+                                                <button class="tab-control bg-white text-black pl-2 pt-1 cursor-pointer" @click="closeModal()">X</button>
+                                            </div>
+                                            <div class="mb-4">
+                                                <p><strong>Shipping Address:</strong></p>
+                                                <p x-text="`${shippingAddresses[selectedShippingAddress].firstName} ${shippingAddresses[selectedShippingAddress].lastName}, ${shippingAddresses[selectedShippingAddress].address}`"></p>                            
+                                            </div>
+                                            <div class="mb-4">
+                                                <p><strong>Billing Address:</strong></p>
+                                                <p x-text="`${billingAddresses[selectedBillingAddress].firstName} ${billingAddresses[selectedBillingAddress].lastName}, ${billingAddresses[selectedBillingAddress].address}`"></p>
+                                            </div>
+                                
+                                            <h4 class="text-xl font-bold mb-4">Cart Items:</h4>
+
+                                            <div class="relative p-3 bg-white border rounded" x-data="{ isOpen: false}">
+                                                <button 
+                                                        @click="isOpen = !isOpen" 
+                                                        @keydown.escape="isOpen = false" 
+                                                        class="flex items-center justify-between w-full" 
+                                                >
+                                                <div class="font-sans block mt-4 lg:inline-block lg:mt-0 align-middle text-black hover:text-gray-700 w-full">
+                                                    <a href="#" role="button" class="relative flex justify-between">
+                                                        <span class="relative">
+                                                            <svg class="flex-1 w-8 h-8 fill-current" viewbox="0 0 24 24" >
+                                                            <path d="M17,18C15.89,18 15,18.89 15,20A2,2 0 0,0 17,22A2,2 0 0,0 19,20C19,18.89 18.1,18 17,18M1,2V4H3L6.6,11.59L5.24,14.04C5.09,14.32 5,14.65 5,15A2,2 0 0,0 7,17H19V15H7.42A0.25,0.25 0 0,1 7.17,14.75C7.17,14.7 7.18,14.66 7.2,14.63L8.1,13H15.55C16.3,13 16.96,12.58 17.3,11.97L20.88,5.5C20.95,5.34 21,5.17 21,5A1,1 0 0,0 20,4H5.21L4.27,2M7,18C5.89,18 5,18.89 5,20A2,2 0 0,0 7,22A2,2 0 0,0 9,20C9,18.89 8.1,18 7,18Z"/>
+                                                            </svg>
+                                                            <p id="cart-label" class="absolute right-[-5px] -top-2.5 w-4 h-4 text-sm rounded flex justify-center items-center text-white rounded-[50px] w-[20px] h-[20px] border-2 border-solid border-blue-900 left-[unset] bg-blue-900" x-show="cart.length > 0" x-text="cart.reduce((total, item) => total + item.quantity, 0)"></p>
+                                                        </span>
+                                                        <span>
+                                                            <svg class="-mr-1 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                                            </svg>                                    
+                                                        </span>
+                                                    </a>
+                                                </div>
+                                                </button>
+                                                <div x-show="isOpen"
+                                                    @click.away="isOpen = false"
+                                                    class="font-normal bg-white overflow-hidden w-full mt-2 right-0 z-20"
+                                                >
+                                                <div x-show="cart.length > 0">
+                                                    <div :class="$store.darkMode && 'text-white'">
+                                                        <div class="flex justify-between border rounded shadow">
+                                                            <div>
+                                                                <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize flex-1">item</h6>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize w-[100px] text-center">price</h6>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize w-[80px] text-center">qty</h6>
+                                                            </div>                                        
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                                    <div x-show="cart.length > 0">
+                                                        <div class="grid grid-cols-1">
+                                                            <template x-for="(product, index) in cart" :key="index">
+                                                                <div class="border p-4 rounded bg-white shadow flex items-center justify-between cartitem">
+                                                                    <div>
+                                                                        <div>
+                                                                            <img :src="product.images" alt="Product image" class="w-16 h-16 object-cover">
+                                                                        </div>
+                                                                        <div>
+                                                                            <h3 class="text-lg font-bold mt-2" x-text="product.name"></h3>
+                                                                            <div class="flex">
+                                                                                <span class="w-12 font-medium">SKU:</span>
+                                                                                <span x-text="product.sku"></span>
+                                                                            </div>
+                                                                            <div class="flex">
+                                                                                <span class="w-12 font-medium">Color:</span>
+                                                                                <span x-text="getColorName(product.color)"></span>
+                                                                            </div>
+                                                                            <div class="flex">
+                                                                                <span class="w-12 font-medium">Size:</span>
+                                                                                <span x-text="getSizeName(product.size)"></span>
+                                                                            </div>
+                                                                        </div>
+                                
+                                                                    </div>
+                                
+                                                                    <div class="text-center w-[100px]">
+                                                                        <p class="text-gray-500" x-text="'$' + product.price"></p>                                        
+                                                                    </div>
+                                                                    <div class="w-[80px] text-center">
+                                                                        <div class="flex items-center mt-2">                                            
+                                                                            
+                                                                            <input type="number" value="product.quantity" min="1" x-model.number="product.quantity" class="mx-1 w-[50px] text-center border border-gray-300 rounded pr-[5px]" disabled />
+                                                                            <p id="cart-label" class="absolute -right-4 -top-4 w-4 h-4 text-sm rounded flex justify-center items-center text-white rounded-[50px] w-[20px] h-[20px] border-2 border-solid border-blue-900 left-[unset] bg-blue-900" x-show="cart.length > 0" x-text="cart.reduce((total, item) => total + item.quantity, 0)"></p>                                                                    
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    
+                                                                </div>
+                                                            </template>
+                                                        </div>       
+                                                        
+                                                    </div>
+                                                    <div class="relative">
+                                                        <p id="cart-label" class="absolute -right-4 -top-4 w-4 h-4 text-sm rounded flex justify-center items-center text-white rounded-[50px] w-[20px] h-[20px] border-2 border-solid border-blue-900 left-[unset] bg-blue-900" x-show="cart.length > 0" x-text="cart.reduce((total, item) => total + item.quantity, 0)"></p>
+                                                    </div> 
+                                                    <div x-show="cart.length > 0">
+                                                        <template x-for="(product, index) in cart" :key="index">
+                                                            <div>
+                                                                <h3 x-text="product.name"></h3>
+                                                                <p x-text="'$' + product.price"></p>
+                                                                <p x-text="'Quantity: ' + product.quantity"></p>
+                                                            </div>
+                                                        </template>
+                                                    </div> 
+                                                </div>
+                                            </div>                                       
+                                            <button class="tab-control bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow mr-5 cursor-pointer active mt-3" @click="closeModal()">Close</button>
+                                        </div>
+                                    </div>
+                                    <div class="fixed w-full text-end max-w-screen-2xl mx-auto my-0 px-[60px] py-0 inset-x-0">
+                                        <!-- Place Order Button -->
+                                        <div class="">
+                                            <button @click="placeOrder()" class="mt-4 p-2 bg-green-500 text-white rounded right-[38px] top-80 w-fit max-w-[1580px] ml-auto mr-0 my-0 px-5 py-3">Place Order</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                        </div>
+                                    
+                                    </div>    
+                                    <div class="flex-[0_0_20%]">
+                                        <!-- Shipping Method Section -->
+                                        <div class="section">
+                                            <h2 class="text-xl font-bold mb-4 pb-2.5 border-b-black border-b border-solid" :class="$store.darkMode && 'text-white'">Shipping Method</h2>
+                                            <label class="block font-medium">
+                                                <input type="radio" name="shippingMethod" value="fixed" x-model="shippingMethod" :class="$store.darkMode && 'text-white'"> Fixed Rate - $5.00
+                                            </label>
+                                            <label class="block font-medium">
+                                                <input type="radio" name="shippingMethod" value="tabletop" x-model="shippingMethod" :class="$store.darkMode && 'text-white'"> Table Top - Based on weight
+                                            </label>
+                                        </div>        
+                                        <!-- Payment Method Section -->
+                                        <div class="section">
+                                            <h2 class="text-xl font-bold mb-4 pb-2.5 border-b-black border-b border-solid" :class="$store.darkMode && 'text-white'">Payment Method</h2>
+                                            <label class="block font-medium">
+                                                <input type="radio" name="paymentMethod" value="check" x-model="paymentMethod" :class="$store.darkMode && 'text-white'"> Check / Money Order
+                                            </label>
+                                            <!-- <label class="block font-medium">
+                                                <input type="radio" name="paymentMethod" value="creditCard" x-model="paymentMethod"> Credit Card
+                                            </label> -->
+                                        </div>
+                                    </div>
+                                    <div class="flex-[0_0_30%]">
+                                        <!-- Order Summary Section -->
+                                        <div class="section border p-4 rounded bg-white shadow mb-0">
+                                            <h2 class="text-xl font-bold mb-4 pb-2.5 border-b-black border-b border-solid">Order Summary</h2>
+                                            <p class="flex justify-between"><strong>Subtotal:</strong><span><span>$</span><span x-text="calculateSubtotal"> </span></p></span>
+                                            <p class="flex justify-between"><strong>Shipping:</strong> <span x-text="shippingCost"></span></p>
+                                            <p class="flex justify-between border-t mt-2 pt-2"><strong>Grand Total:</strong> <span x-text="totalCost"></span></p>
+                                        </div>
+                                        <div class="relative p-3 bg-white border rounded z-[1]" x-data="{ isOpen: false}">
+                                            <button 
+                                                    @click="isOpen = !isOpen" 
+                                                    @keydown.escape="isOpen = false" 
+                                                    class="flex items-center justify-between w-full" 
+                                            >
+                                            <div class="font-sans block mt-4 lg:inline-block lg:mt-0 align-middle text-black hover:text-gray-700 w-full">
+                                                <a href="#" role="button" class="relative flex justify-between">
+                                                    <span class="relative">
+                                                        <svg class="flex-1 w-8 h-8 fill-current" viewbox="0 0 24 24" >
+                                                        <path d="M17,18C15.89,18 15,18.89 15,20A2,2 0 0,0 17,22A2,2 0 0,0 19,20C19,18.89 18.1,18 17,18M1,2V4H3L6.6,11.59L5.24,14.04C5.09,14.32 5,14.65 5,15A2,2 0 0,0 7,17H19V15H7.42A0.25,0.25 0 0,1 7.17,14.75C7.17,14.7 7.18,14.66 7.2,14.63L8.1,13H15.55C16.3,13 16.96,12.58 17.3,11.97L20.88,5.5C20.95,5.34 21,5.17 21,5A1,1 0 0,0 20,4H5.21L4.27,2M7,18C5.89,18 5,18.89 5,20A2,2 0 0,0 7,22A2,2 0 0,0 9,20C9,18.89 8.1,18 7,18Z"/>
+                                                        </svg>
+                                                        <p id="cart-label" class="absolute right-[-5px] -top-2.5 w-4 h-4 text-sm rounded flex justify-center items-center text-white rounded-[50px] w-[20px] h-[20px] border-2 border-solid border-blue-900 left-[unset] bg-blue-900" x-show="cart.length > 0" x-text="cart.reduce((total, item) => total + item.quantity, 0)"></p>
+                                                    </span>
+                                                    <span>
+                                                        <svg class="-mr-1 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                                        </svg>                                    
+                                                    </span>
+                                                </a>
+                                            </div>
+                                            </button>
+                                            <div x-show="isOpen"
+                                                @click.away="isOpen = false"
+                                                class="font-normal bg-white overflow-hidden w-full mt-2 right-0 z-20"
+                                            >
+                                            <div x-show="cart.length > 0">
+                                                <div :class="$store.darkMode && 'text-white'">
+                                                    <div class="flex justify-between border rounded shadow">
+                                                        <div>
+                                                            <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize flex-1">item</h6>
+                                                        </div>
+                                                        <div>
+                                                            <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize w-[100px] text-center">price</h6>
+                                                        </div>
+                                                        <div>
+                                                            <h6 class="font-bold px-4 pt-4 pb-2 text-xl capitalize w-[80px] text-center">qty</h6>
+                                                        </div>                                        
+                                                    </div>
+                                                </div>
+                                            </div>
+                                                <div x-show="cart.length > 0">
+                                                    <div class="grid grid-cols-1">
+                                                        <template x-for="(product, index) in cart" :key="index">
+                                                            <div class="border p-4 rounded bg-white shadow flex items-center justify-between cartitem">
+                                                                <div>
+                                                                    <div>
+                                                                        <img :src="product.image" alt="Product image" class="w-16 h-16 object-cover">
+                                                                    </div>
+                                                                    <div>
+                                                                        <h3 class="text-lg font-bold mt-2" x-text="product.name"></h3>
+                                                                        <div class="flex">
+                                                                            <span class="w-12 font-medium">SKU:</span>
+                                                                            <span x-text="product.sku"></span>
+                                                                        </div>
+                                                                        <div class="flex">
+                                                                            <span class="w-12 font-medium">Color:</span>
+                                                                            <span x-text="product.customColorName"></span>
+                                                                        </div>
+                                                                        <div class="flex">
+                                                                            <span class="w-12 font-medium">Size:</span>
+                                                                            <span x-text="product.customSizeName"></span>
+                                                                        </div>
+                                                                    </div>                    
+                                                                </div>                    
+                                                                <div class="text-center w-[100px]">
+                                                                    <p class="text-gray-500" x-text="'$' + product.price"></p>                                        
+                                                                </div>
+                                                                <div class="w-[80px] text-center">
+                                                                    <div class="flex items-center mt-2">                                            
+                                                                        <input type="number" min="1" @input="updateQuantity(index, product.quantity)" x-model.number="product.quantity" class="mx-1 w-[50px] text-center border border-gray-300 rounded pr-[5px]" disabled />                                                                
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </template>
+                                                    </div>                                                   
+                                                </div> 
+                                               
+                                                
+                                            </div>
+                                        </div>                                                            
+                                    </div>
+                                </div> 
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>  
+            </div> 
+        </div>  
+   
+
+
+<script>
+    document.addEventListener('alpine:init', () => {      
+            // Alpine.store('cart', {
+            //     items: [],
+            //     add(product) {
+            //         const existingProduct = this.items.find(item => item.sku === product.sku);
+            //         if (existingProduct) {
+            //             existingProduct.quantity += 1; // Increase quantity if already in cart
+            //         } else {
+            //             this.items.push({ ...product, quantity: 1 }); // Add new product
+            //         }
+            //     },
+            //     remove(index) {
+            //         this.items.splice(index, 1); // Remove item from cart
+            //     },
+            //     updateQuantity(index, newQuantity) {
+            //         if (newQuantity <= 0) {
+            //             this.remove(index); // Remove item if quantity is 0
+            //         } else {
+            //             this.items[index].quantity = newQuantity; // Update quantity
+            //         }
+            //     },
+            //     clear() {
+            //         this.items = []; // Clear the cart
+            //     },
+            //     get totalQuantity() {
+            //         return this.items.reduce((total, item) => total + item.quantity, 0); // Calculate total quantity
+            //     },
+            //     get subtotal() {
+            //         return this.items.reduce((total, item) => total + item.price * item.quantity, 0); // Calculate subtotal
+            //     },
+                
+            // });
+            Alpine.store('darkMode', false);
+            Alpine.data('dropdown', () => ({
+                open: false,
+                toggle() {
+                    this.open = !this.open;
+                }
+            }));
+            Alpine.data('checkoutData', () => ({
+                savedAddresses: JSON.parse(localStorage.getItem('savedAddresses')) || [],
+                savedBillingAddresses: JSON.parse(localStorage.getItem('savedBillingAddresses')) || [],
+                selectedShippingAddressIndex: null,
+                selectedBillingAddressIndex: null,
+                addNewShippingAddress: false,
+                addNewBillingAddress: false,
+                // baseUrl: 'http://10.0.101.114/mayur-patel/pub/',
+                // token: '3pigh4vzytofsf316wg4rf628v3c6wev',
+                shippingAddress: {
+                    name: '',
+                    address1: '',
+                    address2: '',
+                    city: '',
+                    state: '',
+                    zip: '',
+                    email: ''
+                },
+                sameAsShipping: false,
+                billingAddress: {
+                    name: '',
+                    address1: '',
+                    address2: '',
+                    city: '',
+                    state: '',
+                    zip: '',
+                    email: ''
+                },
+                shippingMethod: 'fixed',
+                paymentMethod: 'check',
+                modalVisible: false,
+                get shippingCost() {
+                    return this.shippingMethod === 'fixed' ? '$5.00' : 'Calculated at checkout';
+                },
+                get totalCost() {
+                    return this.shippingMethod === 'fixed' ? '$55.00' : '$50.00 + Shipping';
+                },
+                saveShippingAddress() {
+                    // Save the shipping address to the list
+                    this.savedAddresses.push({ ...this.shippingAddress });
+                    localStorage.setItem('savedAddresses', JSON.stringify(this.savedAddresses));
+                    this.addNewShippingAddress = false;
+                    this.selectedShippingAddressIndex = this.savedAddresses.length - 1;
+                    // Reset the form
+                    this.shippingAddress = {
+                        name: '',
+                        address1: '',
+                        address2: '',
+                        city: '',
+                        state: '',
+                        zip: '',
+                        email: ''
+                    };
+                },
+                saveBillingAddress() {
+                    // Handle the logic to save the billing address
+                    this.savedBillingAddresses.push({ ...this.billingAddress });
+                    localStorage.setItem('savedBillingAddresses', JSON.stringify(this.savedBillingAddresses));
+                    this.addNewBillingAddress = false;
+                    this.selectedBillingAddressIndex = this.savedBillingAddresses.length - 1;
+                    // Reset the form
+                    this.billingAddress = {
+                        name: '',
+                        address1: '',
+                        address2: '',
+                        city: '',
+                        state: '',
+                        zip: '',
+                        email: ''
+                    };
+                },
+                copyAddress() {
+                    // Copy the selected shipping address to billing address
+                    if (this.selectedShippingAddressIndex !== null) {
+                        const selectedAddress = this.savedAddresses[this.selectedShippingAddressIndex];
+                        this.billingAddress = { ...selectedAddress };
+                        console.log("copiers")
+                    }
+                }
+
+            }));
+            Alpine.data('addressForm', () => ({ 
+                // baseUrl: 'http://10.0.101.114/mayur-patel/pub/',
+                // token: '3pigh4vzytofsf316wg4rf628v3c6wev',
+                 // Shipping address management
+                    shippingAddresses: [
+                        { firstName: 'John', lastName: 'Doe', address: 'Address 1', city: 'City 1', zip: '12345' },
+                        { firstName: 'Jane', lastName: 'Doe', address: 'Address 2', city: 'City 2', zip: '67890' }
+                    ], // Predefined shipping addresses
+                    selectedShippingAddress: null, // To store selected shipping address
+                    newShippingAddress: { firstName: '', lastName: '', address: '', city: '', zip: '' }, // New shipping address input
+                    showShippingForm: false, // To toggle shipping form
+
+                    // Billing address management
+                    billingAddresses: [
+                        { firstName: 'Jim', lastName: 'Smith', address: 'Billing 1', city: 'City 3', zip: '54321' },
+                        { firstName: 'Jake', lastName: 'Smith', address: 'Billing 2', city: 'City 4', zip: '98765' }
+                    ], // Predefined billing addresses
+                    selectedBillingAddress: null, // To store selected billing address
+                    newBillingAddress: { firstName: '', lastName: '', address: '', city: '', zip: '' }, // New billing address input
+                    showBillingForm: false, // To toggle billing form
+                    sameAsShipping: false, // Checkbox for same as shipping
+
+                    // Methods
+                    toggleShippingForm() {
+                        this.showShippingForm = !this.showShippingForm;
+                    },
+                    addNewShippingAddress() {
+                        if (this.newShippingAddress.firstName && this.newShippingAddress.lastName && this.newShippingAddress.address) {
+                            this.shippingAddresses.push({ ...this.newShippingAddress });
+                            this.newShippingAddress = { firstName: '', lastName: '', address: '', city: '', zip: '' };
+                            this.showShippingForm = false;
+                        }
+                    },
+                    toggleSameAsShipping() {
+                        if (this.sameAsShipping && this.selectedShippingAddress !== null) {
+                            this.selectedBillingAddress = this.selectedShippingAddress;
+                        }
+                    },
+                    toggleBillingForm() {
+                        this.showBillingForm = !this.showBillingForm;
+                    },
+                    addNewBillingAddress() {
+                        if (this.newBillingAddress.firstName && this.newBillingAddress.lastName && this.newBillingAddress.address) {
+                            this.billingAddresses.push({ ...this.newBillingAddress });
+                            this.newBillingAddress = { firstName: '', lastName: '', address: '', city: '', zip: '' };
+                            this.showBillingForm = false;
+                        }
+                    },
+                   
+                    // async placeOrder() {
+                    //     console.log('Place order button clicked');
+                    //     // Check if the shipping and billing addresses are selected
+                    //     if (this.selectedShippingAddress !== null && (this.sameAsShipping || this.selectedBillingAddress !== null)) {
+                    //         const orderData = {
+                    //             // Prepare your order data here...
+                    //             // Example structure:
+                    //             {
+                    //                 "entity": {
+                    //                     "base_currency_code": "USD",
+                    //                     "customer_email": "roni_cost@example.com",
+                    //                     "customer_firstname": "Veronica",
+                    //                     "customer_lastname": "Costello",
+                    //                     "is_virtual": 0,
+                    //                     "order_currency_code": "USD",
+                    //                     "shipping_description": "Flat Rate - Fixed",
+                    //                     "state": "processing",
+                    //                     "status": "processing",
+                    //                     "items": [
+                    //                     {
+                    //                         "item_id": 1,
+                    //                         "name": "Iris Workout Top",
+                    //                         "price": 29,
+                    //                         "sku": "WS03-XS-Red",
+                    //                         "product_option": {
+                    //                         "extension_attributes": {
+                    //                             "configurable_item_options": [
+                    //                             {
+                    //                                 "option_id": "144",
+                    //                                 "option_value": 166
+                    //                             },
+                    //                             {
+                    //                                 "option_id": "93",
+                    //                                 "option_value": 58
+                    //                             }
+                    //                             ]
+                    //                         }
+                    //                         }
+                    //                     }
+                    //                     ],
+                    //                     "billing_address": {
+                    //                     "address_type": "billing",
+                    //                     "city": "Calder",
+                    //                     "country_id": "US",
+                    //                     "customer_address_id": 1,
+                    //                     "email": "roni_cost@example.com",
+                    //                     "entity_id": 2,
+                    //                     "firstname": "Veronica",
+                    //                     "lastname": "Costello",
+                    //                     "postcode": "49628-7978",
+                    //                     "region": "Michigan",
+                    //                     "street": [
+                    //                         "6146 Honey Bluff Parkway"
+                    //                     ],
+                    //                     "telephone": "(555) 229-3326"
+                    //                     },
+                    //                     "payment": {
+                    //                     "amount_ordered": 36.39,
+                    //                     "amount_paid": 36.39,
+                    //                     "base_amount_ordered": 36.39,
+                    //                     "base_amount_paid": 36.39,
+                    //                     "entity_id": 1,
+                    //                     "method": "checkmo",
+                    //                     "shipping_amount": 5
+                    //                     },
+                    //                     "extension_attributes": {
+                    //                     "shipping_assignments": [
+                    //                         {
+                    //                         "shipping": {
+                    //                             "address": {
+                    //                             "address_type": "shipping",
+                    //                             "city": "Calder",
+                    //                             "country_id": "US",
+                    //                             "customer_address_id": 1,
+                    //                             "email": "roni_cost@example.com",
+                    //                             "entity_id": 1,
+                    //                             "firstname": "Veronica",
+                    //                             "lastname": "Costello",
+                    //                             "postcode": "49628-7978",
+                    //                             "region": "Michigan",
+                    //                             "street": [
+                    //                                 "6146 Honey Bluff Parkway"
+                    //                             ],
+                    //                             "telephone": "(555) 229-3326"
+                    //                             },
+                    //                             "method": "flatrate_flatrate"
+                    //                         },
+                    //                         "items": [
+                    //                             {
+                    //                             "item_id": 1,
+                    //                             "name": "Iris Workout Top",
+                    //                             "price": 29,
+                    //                             "qty_ordered": 1,
+                    //                             "sku": "WS03-XS-Red"
+                    //                             }
+                    //                         ]
+                    //                         }
+                    //                     ]
+                    //                     }
+                    //                 }
+                    //             }
+                    //         };
+                    //         try {
+                    //             const response = await fetch(`${this.baseUrl}rest/V1/orders`, {
+                    //                 method: 'POST',
+                    //                 headers: {
+                    //                     'Content-Type': 'application/json',
+                    //                     'Authorization': `Bearer ${this.token}`
+                    //                 },
+                    //                 body: JSON.stringify(orderData)
+                    //             });
+                    //             if (!response.ok) {
+                    //                 const errorData = await response.json();
+                    //                 throw new Error(`Error: ${errorData.message || 'Unknown error'}`);
+                    //             }
+                    //             const data = await response.json();
+                    //             console.log('Order placed successfully:', data);
+                    //         } catch (error) {
+                    //             console.error('Error placing order:', error);
+                    //             alert('There was an error placing your order: ' + error.message);
+                    //         }
+                    //     } else {
+                    //         alert('Please select a shipping and billing address.');
+                    //     }
+                    // },
+                 
+                    closeModal() {
+                        this.modalVisible = false;
+                    }
+            }));            
+            Alpine.data('fetchProducts', () => ({
+                activeTab: 0,
+                loading: true,
+                products: [],
+                showSaleOnly: false,
+                filteredProducts: [],
+                gridView: true,
+                searchQuery: '',
+                selectedColors: [],
+                selectedSizes: [],
+                priceMin: 0,
+                priceMax: 1000,
+                sortBy: '',
+                categoryId: 41,
+                cart: [],
+                baseUrl: 'http://10.0.101.114/mayur-patel/pub/',
+                token: '3pigh4vzytofsf316wg4rf628v3c6wev',
+                customColorMapping: {},
+                customSizeMapping: {},
+                couponCode: '',
+                couponDiscount: 0,
+                couponError: false,
+
+                init() {
+                    this.fetchCustomColorMapping();
+                    this.fetchCustomSizeMapping();
+                    this.getProductsByCategory();
+                    const storedCart = localStorage.getItem('cart');
+                    if (storedCart) {
+                        this.cart = JSON.parse(storedCart); // Load from local storage
+                    }
+                },                  
+                removeCouponCode() {
+                    this.couponCode = '';
+                    this.couponDiscount = 0;
+                    this.couponError = false;
+                },
+
+                
+                async fetchCustomColorMapping() {
+                    try {
+                        const response = await fetch(`${this.baseUrl}rest/V1/products/attributes/customcolor/options`, {
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`
+                            }
+                        });
+                        const data = await response.json();
+                        const colorMapping = {};
+                        data.forEach(option => {
+                            if (option.value && option.label) {
+                                colorMapping[option.value] = option.label;
+                            }
+                        });
+                        this.customColorMapping = colorMapping;
+                    } catch (error) {
+                        console.error('Error fetching custom color mapping:', error);
+                    }
+                },
+
+                async fetchCustomSizeMapping() {
+                    try {
+                        const response = await fetch(`${this.baseUrl}rest/V1/products/attributes/customsize/options`, {
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`
+                            }
+                        });
+                        const data = await response.json();
+                        const sizeMapping = {};
+                        data.forEach(option => {
+                            if (option.value && option.label) {
+                                sizeMapping[option.value] = option.label;
+                            }
+                        });
+                        this.customSizeMapping = sizeMapping;
+                    } catch (error) {
+                        console.error('Error fetching custom size mapping:', error);
+                    }
+                },
+
+                async getProductsByCategory() {
+                    try {
+                        const categoryUrl = `${this.baseUrl}/rest/V1/categories/${this.categoryId}/products`;
+                        const categoryResponse = await fetch(categoryUrl, {
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`
+                            }
+                        });
+                        const productSkus = await categoryResponse.json();
+                        await this.fetchProductDetails(productSkus);
+                    } catch (error) {
+                        console.error('Error fetching products by category:', error);
+                    }
+                    this.applyFilters();
+                },
+
+                async fetchProductDetails(productSkus) {
+                    try {
+                        const productDetails = await Promise.all(productSkus.map(async (product) => {
+                            const productUrl = `${this.baseUrl}/rest/V1/products/${product.sku}?searchCriteria[filter_groups][0][filters][0][field]=price&searchCriteria[filter_groups][0][filters][0][value]=${this.priceMin}&searchCriteria[filter_groups][0][filters][1][field]=price&searchCriteria[filter_groups][0][filters][1][value]=${this.priceMax}&searchCriteria[filter_groups][0][filters][1][condition_type]=lt`;
+                            const productResponse = await fetch(productUrl, {
+                                headers: {
+                                    'Authorization': `Bearer ${this.token}`
+                                }
+                            });
+                            const productDetail = await productResponse.json();
+                            return {
+                                id: productDetail.id,
+                                price: productDetail.price,
+                                name: productDetail.name,
+                                sku: productDetail.sku,
+                                image: this.getProductImageUrl(productDetail),
+                                customColorName: this.getCustomColorName(productDetail),
+                                isOnSale: this.isProductOnSale(productDetail),
+                                customSizeName: this.getCustomSizeName(productDetail)
+                            };
+                        }));
+                        this.products = productDetails;
+                        this.filteredProducts = productDetails;
+                        this.applyFilters();
+                    } catch (error) {
+                        console.error('Error fetching product details:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                applyFilters() {
+                    this.filteredProducts = this.products.filter(product => {
+                        if (this.searchQuery && !product.name.toLowerCase().includes(this.searchQuery.toLowerCase()) && !product.sku.toLowerCase().includes(this.searchQuery.toLowerCase())) {
+                            return false;
+                        }
+                        if (this.selectedColors.length && !this.selectedColors.includes(Object.keys(this.customColorMapping).find(key => this.customColorMapping[key] === product.customColorName))) {
+                            return false;
+                        }
+                        if (this.selectedSizes.length && !this.selectedSizes.includes(Object.keys(this.customSizeMapping).find(key => this.customSizeMapping[key] === product.customSizeName))) {
+                            return false;
+                        }
+                        if (this.showSaleOnly && !product.isOnSale) {
+                            return false;
+                        }
+                        if (product.price < this.priceMin || product.price > this.priceMax) {
+                            return false;
+                        }                        
+                        return true;
+                    });
+                    this.applySorting();
+                },
+                applySorting() {
+                    switch (this.sortBy) {
+                        case 'name-asc':
+                            this.filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
+                            break;
+                        case 'name-desc':
+                            this.filteredProducts.sort((a, b) => b.name.localeCompare(a.name));
+                            break;
+                        case 'price-low-high':
+                            this.filteredProducts.sort((a, b) => a.price - b.price);
+                            break;
+                        case 'price-high-low':
+                            this.filteredProducts.sort((a, b) => b.price - a.price);
+                            break;
+                        default:
+                            break;
+                    }
+                },
+
+                removeFilter(filterKey, value = null) {
+                    if (value) {
+                        this[filterKey] = this[filterKey].filter(item => item !== value);
+                    } else {
+                        this[filterKey] = '';
+                    }
+                    this.applyFilters();
+                },
+
+                removeAllFilters() {
+                    this.searchQuery = '';
+                    this.selectedColors = [];
+                    this.selectedSizes = [];
+                    this.priceMin = 0;
+                    this.priceMax = 1000;
+                    this.showSaleOnly = false;
+                    this.applyFilters();
+                },
+
+                hasActiveFilters() {
+                    return this.searchQuery || this.selectedColors.length || this.selectedSizes.length || this.priceMin || this.priceMax;                    
+                },
+
+                getProductImageUrl(productDetail) {
+                    const imagePath = productDetail.media_gallery_entries.length > 0 ? productDetail.media_gallery_entries[0].file : 'placeholder.jpg';
+                    return `${this.baseUrl}media/catalog/product/cache/c7fe3448dd3a9867d76b4ef511ce9c2d${imagePath}`;
+                },
+
+                getCustomColorName(productDetail) {
+                    const customColorAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'customcolor');
+                    const customColorValue = customColorAttribute ? customColorAttribute.value : null;
+                    return customColorValue ? this.customColorMapping[customColorValue] || 'Unknown Color' : 'N/A';
+                },
+
+                getCustomSizeName(productDetail) {
+                    const customSizeAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'customsize');
+                    const customSizeValue = customSizeAttribute ? customSizeAttribute.value : null;
+                    return customSizeValue ? this.customSizeMapping[customSizeValue] || 'Unknown Size' : 'N/A';
+                },
+
+                isProductOnSale(productDetail) {                    
+                    const saleAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'sale');
+                    return saleAttribute ? saleAttribute.value === '1' : false;
+                },
+
+                // addToCart(product) {
+                //     const existingProduct = this.cart.find(item => item.sku === product.sku);
+                //     if (existingProduct) {
+                //         existingProduct.quantity += 1; // Update quantity
+                //     } else {
+                //         this.cart.push({...product, quantity: 1}); // Add new product
+                //     }
+                //     this.updateCartLabel(); // Update cart label
+                // },
+
+                removeFromCart(index) {
+                    this.cart.splice(index, 1); // Remove item from cart
+                    this.updateCartLabel(); // Update cart label
+                },
+
+                updateQuantity(index, newQuantity) {
+                    if (newQuantity <= 0) {
+                        this.removeFromCart(index); // Remove item if quantity is 0
+                    } else {
+                        this.cart[index].quantity = newQuantity; // Update quantity
+                    }
+                    this.updateCartLabel(); // Update cart label
+                },
+
+                addToCart(product) {
+                    const existingProduct = this.cart.find(item => item.sku === product.sku);
+                    if (existingProduct) {
+                        existingProduct.quantity += 1;
+                    } else {
+                        this.cart.push({...product, quantity: 1});
+                    }
+                    localStorage.setItem('cart', JSON.stringify(this.cart)); // Save to local storage
+                    this.updateCartLabel();
+                },
+
+                  
+                //
+
+                // addToCart(product) {   
+                //     const existingProduct = this.cart.find(item => item.sku === product.sku);
+                //     if (existingProduct) {
+                //         existingProduct.quantity += 1;
+                //     } else {
+                //         this.cart.push({...product, quantity: 1});
+                //     }                    
+                //     this.updateCartLabel();                 
+                //     console.log('Adding To Cart:', product);
+                //     console.log('Current Cart:', this.cart);
+                //     console.log('Total Quantity:', totalQuantity);
+                // },
+
+                // removeFromCart(index) {
+                //     this.cart.splice(index, 1);
+                //     this.updateCartLabel();
+                // },
+                // updateQuantity(index, newQuantity) {
+                //     if (newQuantity <= 0) {
+                //         this.removeFromCart(index);
+                //     } else {
+                //         this.cart[index].quantity = newQuantity;
+                //     }
+                //     this.updateCartLabel();
+                // },
+                updateCart() {
+                    this.updateCartLabel();
+                },
+
+                updateCartLabel() {
+                    const element = document.querySelector('#cart-label');                    
+                    const totalQuantity = this.cart.reduce((total, item) => total + item.quantity, 0); // Calculate total quantity
+                    if (totalQuantity === 0) {
+                        element.classList.add("hidden");
+                    } else {
+                        element.classList.remove("hidden");
+                        element.textContent = totalQuantity; // Update the cart label with total quantity
+                    }
+                    console.log('Current Cart:', this.cart);
+                    console.log('Total Quantity:', totalQuantity);
+                },
+                calculateSubtotal() {
+                    return this.cart.reduce((total, product) => total + product.price * product.quantity, 0);
+                },
+                calculateTax() {
+                    return this.cart.reduce((total, product) => {
+                        if (product.sku === 'TEST2') {
+                            return total + product.price * product.quantity * 0.1;
+                        }
+                        return total;
+                    }, 0);
+                },
+                calculateColorDiscount() {
+                    return this.cart.reduce((total, product) => {
+                        if (['yellow', 'green'].includes(this.getColorName(product.color).toLowerCase())) {
+                            return total + product.price * product.quantity * 0.05;
+                        }
+                        return total;
+                    }, 0);
+                },
+                getColorName(colorId) {
+                    const color = this.colors.find(c => c.id === colorId);
+                    return color ? color.name : 'Unknown';
+                },
+                getSizeName(sizeId) {
+                    const size = this.sizes.find(s => s.id === sizeId);
+                    return size ? size.name : 'Unknown';
+                },
+                calculateGrandTotal() {
+                    const subtotal = this.calculateSubtotal();
+                    const tax = this.calculateTax();
+                    const colorDiscount = this.calculateColorDiscount();
+                    return subtotal + tax - colorDiscount - this.couponDiscount;
+                },
+                applyCouponCode() {
+                    if (this.couponCode === 'FLAT10') {
+                        this.couponDiscount = this.calculateSubtotal() * 0.1;
+                        this.couponError = false;
+                    } else if (this.couponCode === 'FLAT20') {
+                        this.couponDiscount = this.calculateSubtotal() * 0.2;
+                        this.couponError = false;
+                    } else if (this.couponCode === 'FLAT50') {
+                        this.couponDiscount = 50;
+                        this.couponError = false;
+                    } else {
+                        this.couponDiscount = 0;
+                        this.couponError = true;
+                    }
+                },
+                processToCheckout() {
+                    this.activeTab = 2;  // Set active tab to Checkout
+                },                
+                validation() {
+                    if (/^\d*$/.test(this.minprice)) {
+                        if (this.minprice > this.max) {
+                            this.minprice = 950;
+                        }
+                        if (this.minprice < this.min) {
+                            this.minprice = this.min;
+                        }
+                    } else {
+                        this.minprice = 0;
+                    }
+                    if (/^\d*$/.test(this.maxprice)) {
+                        if (this.maxprice > this.max) {
+                            this.maxprice = this.max;
+                        }
+                        if (this.maxprice < this.min) {
+                            this.maxprice = 150;
+                        }
+                    } else {
+                        this.maxprice = 1000;
+                    }
+                }
+            }));    
+    });  
+</script>  
+<style>
+    .newdemo-index-index .columns {
+        display: block;
+    }
+    .newdemo-index-index .footer { 
+        display:none;
+    }
+    .range-slider {
+	 width: 100%;
+	 text-align: center;
+	 position: relative;
+     margin-bottom:30px;
+}
+ .range-slider .rangeValues {
+	 display: block;
+}
+.range-slider input[type=range] {
+	 -webkit-appearance: none;
+	 border: 1px solid white;
+	 width: 100%;
+	 position: absolute;
+	 left: 0;
+}
+.range-slider input[type=range]::-webkit-slider-runnable-track {
+	 width: 100%;
+	 height: 5px;
+	 background: #ddd;
+	 border: none;
+	 border-radius: 3px;
+}
+.range-slider input[type=range]::-webkit-slider-thumb {
+	 -webkit-appearance: none;
+	 border: none;
+	 height: 16px;
+	 width: 16px;
+	 border-radius: 50%;
+	 background: #21c1ff;
+	 margin-top: -4px;
+	 cursor: pointer;
+	 position: relative;
+	 z-index: 1;
+}
+.range-slider input[type=range]:focus {
+	 outline: none;
+}
+.range-slider input[type=range]:focus::-webkit-slider-runnable-track {
+	 background: #ccc;
+}
+.range-slider input[type=range]::-moz-range-track {
+	 width: 100%;
+	 height: 5px;
+	 background: #ddd;
+	 border: none;
+	 border-radius: 3px;
+}
+.range-slider input[type=range]::-moz-range-thumb {
+	 border: none;
+	 height: 16px;
+	 width: 16px;
+	 border-radius: 50%;
+	 background: blue;
+}
+/*hide the outline behind the border*/
+.range-slider input[type=range]:-moz-focusring {
+	 outline: 1px solid white;
+	 outline-offset: -1px;
+}
+.range-slider input[type=range]::-ms-track {
+	 width: 100%;
+	 height: 5px;
+	/*remove bg colour from the track, we'll use ms-fill-lower and ms-fill-upper instead */
+	 background: transparent;
+	/*leave room for the larger thumb to overflow with a transparent border */
+	 border-color: transparent;
+	 border-width: 6px 0;
+	/*remove default tick marks*/
+	 color: transparent;
+	 z-index: -4;
+}
+.range-slider input[type=range]::-ms-fill-lower {
+	 background: #777;
+	 border-radius: 10px;
+}
+.range-slider input[type=range]::-ms-fill-upper {
+	 background: #ddd;
+	 border-radius: 10px;
+}
+.range-slider input[type=range]::-ms-thumb {
+	 border: none;
+	 height: 16px;
+	 width: 16px;
+	 border-radius: 50%;
+	 background: blue;
+}
+.range-slider input[type=range]:focus::-ms-fill-lower {
+	 background: #888;
+}
+.range-slider input[type=range]:focus::-ms-fill-upper {
+	 background: #ccc;
+} 
+</style>
+<script>
+    function getVals(){
+  // Get slider values
+  let parent = this.parentNode;
+  let slides = parent.getElementsByTagName("input");
+    let slide1 = parseFloat( slides[0].value );
+    let slide2 = parseFloat( slides[1].value );
+  // Neither slider will clip the other, so make sure we determine which is larger
+  if( slide1 > slide2 ){ let tmp = slide2; slide2 = slide1; slide1 = tmp; }
+  
+  let displayElement = parent.getElementsByClassName("rangeValues")[0];
+      displayElement.innerHTML = "$" + slide1 + " - $" + slide2;
+}
+
+window.onload = function(){
+  // Initialize Sliders
+  let sliderSections = document.getElementsByClassName("range-slider");
+      for( let x = 0; x < sliderSections.length; x++ ){
+        let sliders = sliderSections[x].getElementsByTagName("input");
+        for( let y = 0; y < sliders.length; y++ ){
+          if( sliders[y].type ==="range" ){
+            sliders[y].oninput = getVals;
+            // Manually trigger event first time to display values
+            sliders[y].oninput();
+          }
+        }
+      }
+}
+</script>
