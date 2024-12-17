@@ -1,0 +1,165 @@
+<div x-data="slider()" x-init="fetchProducts()" class="relative w-full overflow-hidden">
+    <!-- Slider Wrapper -->
+    <div 
+        class="flex transition-transform duration-300 ease-in-out"
+        :style="`transform: translateX(-${currentIndex * 100}%); width: ${slides.length * 100}%;`"
+    >
+        <!-- Slides -->
+        <template x-for="(slide, index) in slides" :key="index">
+            <div class="flex-shrink-0 flex gap-4 w-full" style="width: 100%;">
+                <!-- Products in the Slide -->
+                <template x-for="product in slide.products" :key="product.id">
+                    <div 
+                        :class="gridView ? 'border p-4 rounded bg-white shadow' : 'flex border p-4 rounded bg-white shadow'" 
+                        class="w-1/6"
+                    >
+                        <div class="">
+                            <div>
+                                <img 
+                                    :src="product.image" 
+                                    alt="Product Image" 
+                                    class="object-cover w-full" 
+                                />
+                            </div>
+                            <h3 class="text-lg font-bold" x-text="product.name"></h3>
+                            <div class="flex mt-2">
+                                <span class="font-bold w-12">Price:</span>
+                                <span class="font-bold">$</span>
+                                <span class="font-bold" x-text="product.price"></span>
+                            </div>
+                            <div class="flex mt-2">
+                                <span class="w-12 font-medium">SKU:</span>
+                                <span x-text="product.sku"></span>
+                            </div>
+                            <div class="flex">
+                                <span class="w-12 font-medium">Color:</span>
+                                <span x-text="product.customColorName"></span>
+                            </div>
+                            <div class="flex">
+                                <span class="w-12 font-medium">Size:</span>
+                                <span x-text="product.customSizeName"></span>
+                            </div>
+                            <div class="product_addtocart_form">                                
+                                <button id="product-addtocart-button"
+                                    @click="addToCart(product)" 
+                                    class="uppercase font-semibold tracking-wide bg-blue-100 text-blue-700 px-4 py-2 rounded-lg mt-2 focus:outline-none hover:bg-blue-200"
+                                >
+                                    Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="absolute inset-0 flex justify-between items-center -translate-y-2/4 h-[50px] top-2/4">
+        <button 
+            @click="prev()" 
+            class="p-2 bg-white rounded-full shadow hover:bg-gray-100 focus:outline-none w-10"
+        >
+            &#10094; <!-- Left Arrow -->
+        </button>
+        <button 
+            @click="next()" 
+            class="p-2 bg-white rounded-full shadow hover:bg-gray-100 focus:outline-none w-10"
+        >
+            &#10095; <!-- Right Arrow -->
+        </button>
+    </div>
+</div>
+
+<script>
+    function slider() {
+        return {
+            baseUrl: 'http://10.0.101.114/mayur-patel/pub/', // Replace with your API base URL
+            token: '3pigh4vzytofsf316wg4rf628v3c6wev', // Replace with your Bearer token
+            categoryId: '41', // Replace with the category ID
+            products: [],
+            slides: [],
+            currentIndex: 0,
+            productsPerSlide: 4,
+            loading: true,
+            async fetchProducts() {
+                try {
+                    // Fetch products by category
+                    const categoryUrl = `${this.baseUrl}/rest/V1/categories/${this.categoryId}/products`;
+                    const categoryResponse = await fetch(categoryUrl, {
+                        headers: { 'Authorization': `Bearer ${this.token}` }
+                    });
+                    const productSkus = await categoryResponse.json();
+
+                    // Fetch product details
+                    const productDetails = await Promise.all(productSkus.map(async (product) => {
+                        const productUrl = `${this.baseUrl}/rest/V1/products/${product.sku}`;
+                        const productResponse = await fetch(productUrl, {
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        const productDetail = await productResponse.json();
+                        return {
+                            id: productDetail.id,
+                            price: productDetail.price,
+                            name: productDetail.name,
+                            sku: productDetail.sku,
+                            image: this.getProductImageUrl(productDetail),
+                            customColorName: this.getCustomColorName(productDetail),
+                            customSizeName: this.getCustomSizeName(productDetail)
+                        };
+                    }));
+
+                    this.products = productDetails;
+                    this.generateSlides();
+                } catch (error) {
+                    console.error('Error fetching products:', error);
+                } finally {
+                    this.loading = false;
+                }
+            },
+            generateSlides() {
+                // Divide products into slides
+                this.slides = [];
+                for (let i = 0; i < this.products.length; i += this.productsPerSlide) {
+                    this.slides.push({ products: this.products.slice(i, i + this.productsPerSlide) });
+                }
+            },
+            next() {
+                this.currentIndex = (this.currentIndex + 1) % this.slides.length;
+            },
+            prev() {
+                this.currentIndex = (this.currentIndex - 1 + this.slides.length) % this.slides.length;
+            },            
+            getProductImageUrl(productDetail) {
+                const imagePath = productDetail.media_gallery_entries.length > 0 ? productDetail.media_gallery_entries[0].file : 'placeholder.jpg';
+                return `${this.baseUrl}media/catalog/product/cache/c7fe3448dd3a9867d76b4ef511ce9c2d${imagePath}`;
+            },
+            getCustomColorName(productDetail) {
+                return productDetail.custom_attributes.find(attr => attr.attribute_code === 'color')?.value || 'N/A';
+            },
+            getCustomSizeName(productDetail) {
+                return productDetail.custom_attributes.find(attr => attr.attribute_code === 'size')?.value || 'N/A';
+            },
+            addToCart(product) {
+                console.log('Add to cart:', product);
+            },
+        };
+    }
+    
+</script>
+
+<style>
+.newdemo-index-index .page-main .columns {
+    display: flex;
+}
+.newdemo-index-index .column.main {
+    flex: 1;
+}
+</style>
+
+
+
+
+
+
+

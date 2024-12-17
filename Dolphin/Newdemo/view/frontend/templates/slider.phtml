@@ -1,0 +1,930 @@
+<style>
+    .modal {
+        display: none;    
+        background: rgba(0, 0, 0, 0.5); 
+    }
+    .modal.show {
+        display: flex; 
+    }
+</style>
+    <div x-data :class="$store.darkMode && 'bg-black'" class="h-full pb-5">
+        <div class="h-full">
+            <div x-data="ecommerceApp()" class="flex">
+                <div class="tab-wrapper container mx-auto px-4">  
+                    
+                    <div class="tab-panel" x-show.transition.in.opacity.duration.600="activeTab === 0" x-init="fetchProducts()" x-transition:enter.duration.500ms x-transition:leave.duration.300ms>
+                            <div class="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-4">
+                                <!-- Filter Section -->
+                                    <div>
+                                        <!-- Active Filters Section -->
+                                        <div class="mb-4 bg-white shadow p-2 py-3 border rounded">
+                                            <h4 class="font-bold mb-2">Active Filters:</h4>
+                                                <div class="flex flex-wrap">
+                                                    <template x-if="searchQuery">
+                                                        <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                                            Search: <strong x-text="searchQuery"></strong>
+                                                            <button @click="removeFilter('searchQuery')" class="ml-2 text-red-600">&times;</button>
+                                                        </span>
+                                                    </template>
+                                                    <template x-if="showSaleOnly">
+                                                        <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                                            Sale Only
+                                                            <button @click="removeFilter('showSaleOnly')" class="ml-2 text-red-600">&times;</button>
+                                                        </span>
+                                                    </template>
+                                                    <template x-for="colorId in selectedColors" :key="colorId">
+                                                        <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                                            Color: <strong x-text="customColorMapping[colorId]"></strong>
+                                                            <button @click="removeFilter('selectedColors', colorId)" class="ml-2 text-red-600">&times;</button>
+                                                        </span>
+                                                    </template>
+                                                    <template x-for="sizeId in selectedSizes" :key="sizeId">
+                                                        <span class="bg-gray-200 text-gray-800 p-2 rounded mr-2 mb-2">
+                                                            Size: <strong x-text="customSizeMapping[sizeId]"></strong>
+                                                            <button @click="removeFilter('selectedSizes', sizeId)" class="ml-2 text-red-600">&times;</button>
+                                                        </span>
+                                                    </template>
+
+                                                    <div x-show="minprice !== min || maxprice !== max" class="bg-gray-200 px-3 py-1 rounded-full text-sm flex items-center">
+                                                    <span>Price: $<span x-text="minprice"></span> - $<span x-text="maxprice"></span></span>
+                                                    <button @click="resetPriceFilter" class="text-red-500 ml-2">&times;</button>
+                                                    </div>
+                                                    
+                                                    
+                                                    <template x-if="hasActiveFilters()">
+                                                        <span class="bg-red-200 text-red-800 p-2 rounded mr-2 mb-2 cursor-pointer" @click="removeAllFilters">Remove All Filters</span>
+                                                    </template>
+                                                </div>
+                                        </div>
+                                        <div class="bg-white shadow p-2 py-3 border rounded">                                    
+                                            <!-- Search Section -->
+                                                <div class="mb-4">
+                                                    <label for="searchFilter" class="block font-bold mb-2">Search by Name or SKU:</label>
+                                                    <input id="searchFilter" type="text" x-model="searchQuery" @input="applyFilters" class="block w-full p-2 border rounded" placeholder="Search...">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block font-bold mb-2">Filter by Sale:</label>
+                                                    <label class="block mr-4 mb-2">
+                                                        <input type="checkbox" x-model="showSaleOnly" @change="applyFilters" class="mr-2">
+                                                        <span>Show Sale Products Only</span>
+                                                    </label>
+                                                </div>
+                                            <!-- Color Filter Section -->
+                                                <div class="mb-4">
+                                                    <label class="block font-bold mb-2">Filter by Color:</label>
+                                                    <div class="flex flex-wrap">
+                                                        <template x-for="(colorName, colorId) in customColorMapping" :key="colorId">
+                                                            <label class="block mr-4 mb-2">
+                                                                <input type="checkbox" :value="colorId" x-model="selectedColors" @change="applyFilters" class="mr-2">
+                                                                <span x-text="colorName"></span>
+                                                            </label>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            <!-- Size Filter Section -->
+                                                <div class="mb-4">
+                                                    <label class="block font-bold mb-2">Filter by Size:</label>
+                                                    <div class="flex flex-wrap">
+                                                        <template x-for="(sizeName, sizeId) in customSizeMapping" :key="sizeId">
+                                                            <label class="block mr-4 mb-2">
+                                                                <input type="checkbox" :value="sizeId" x-model="selectedSizes" @change="applyFilters" class="mr-2">
+                                                                <span x-text="sizeName"></span>
+                                                            </label>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            
+
+
+                                            
+                                                <div class="range-slider">
+                                                        <input type="range" x-model="priceMin" @input="applyFilters" min="0" max="1000" step="10" value="1000">
+                                                        <input type="range" x-model="priceMax" @input="applyFilters" min="0" max="1000" step="10" value="50000">
+                                                </div>
+                                                <div class="flex justify-between mt-2">
+                                                        <span x-text="`$${priceMin}`"></span>
+                                                        <span x-text="`$${priceMax}`"></span>
+                                                </div>
+                                        </div>
+                                    </div>
+                                <!-- Product Listing Section -->
+                                    <div class="lg:col-span-3">    
+                                        
+                                        <p class="font-bold text-2xl uppercase my-6" :class="$store.darkMode && 'text-white'">Product List</p>
+                                        <div class="flex flex-wrap justify-between">
+                                            <!-- View Toggle Buttons -->
+                                            <div class="flex justify-between items-center mb-4">
+                                                <div>
+                                                    <button @click="gridView = true" :class="gridView ? 'bg-gray-200' : 'bg-white'" class="px-4 py-2 border rounded-l-md">
+                                                        <!-- Grid Icon -->
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button @click="gridView = false" :class="!gridView ? 'bg-gray-200' : 'bg-white'" class="px-4 py-2 border rounded-r-md">
+                                                        <!-- List Icon -->
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>                                
+                                            </div>
+                
+                                            <!-- Sort Dropdown -->
+                                            <div class="sort-by-section mb-4">
+                                                <label for="sortBy" class="mr-2 font-semibold">Sort by:</label>
+                                                <select id="sortBy" class="p-2 border border-gray-400 rounded w-[175px]" x-model="sortBy" @change="applySorting">
+                                                    <option value="">Select...</option>
+                                                    <option value="name-asc">Name: A to Z</option>
+                                                    <option value="name-desc">Name: Z to A</option>
+                                                    <option value="price-low-high">Price: Low to High</option>
+                                                    <option value="price-high-low">Price: High to Low</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    
+
+                                        <p x-show="loading">Loading...</p>
+
+
+
+                                        <div class="relative w-full">
+    <!-- Slider Wrapper -->
+    <div 
+        class="overflow-hidden relative"
+        style="width: 100%; max-width: 100%;"
+    >
+        <div 
+            class="flex transition-transform duration-300 ease-in-out"
+            :style="`transform: translateX(-${currentIndex * 100}%);`"
+        >
+            <!-- Product Cards -->
+            <template x-for="product in filteredProducts" :key="product.id">
+                <div 
+                    :class="gridView ? 'border p-4 rounded bg-white shadow' : 'flex border p-4 rounded bg-white shadow'"
+                    class="w-full flex-shrink-0"
+                    style="width: 100%; max-width: 100%;"
+                >
+                    <div class="">
+                        <div>
+                            <img 
+                                :src="product.image" 
+                                alt="Product Image" 
+                                class="object-cover w-full max-w-lg" 
+                            />
+                        </div>
+                        <h3 class="text-lg font-bold" x-text="product.name"></h3>
+                        <div class="flex mt-2">
+                            <span class="font-bold w-12">Price:</span>
+                            <span class="font-bold">$</span>
+                            <span class="font-bold" x-text="product.price"></span>
+                        </div>
+                        <div class="flex mt-2">
+                            <span class="w-12 font-medium">SKU:</span>
+                            <span x-text="product.sku"></span>
+                        </div>
+                        <div class="flex">
+                            <span class="w-12 font-medium">Color:</span>
+                            <span x-text="product.customColorName"></span>
+                        </div>
+                        <div class="flex">
+                            <span class="w-12 font-medium">Size:</span>
+                            <span x-text="product.customSizeName"></span>
+                        </div>
+                        <div>
+                            <button 
+                                @click="addToCart(product)" 
+                                class="uppercase font-semibold tracking-wide bg-blue-100 text-blue-700 px-4 py-2 rounded-lg mt-2 focus:outline-none hover:bg-blue-200"
+                            >
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="absolute inset-0 flex justify-between items-center">
+        <button 
+            @click="prev()" 
+            class="p-2 bg-white rounded-full shadow hover:bg-gray-100 focus:outline-none"
+        >
+            &#10094; <!-- Left Arrow -->
+        </button>
+        <button 
+            @click="next()" 
+            class="p-2 bg-white rounded-full shadow hover:bg-gray-100 focus:outline-none"
+        >
+            &#10095; <!-- Right Arrow -->
+        </button>
+    </div>
+</div>
+
+
+
+
+                                        <div x-show="!loading && filteredProducts.length > 0">
+                                            <div :class="gridView ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'">
+                                                <template x-for="product in filteredProducts" :key="product.id">
+                                                    <div :class="gridView ? 'border p-4 rounded bg-white shadow' : 'flex border p-4 rounded bg-white shadow'">
+                                                        <div class="">
+                                                            <div>
+                                                                <img :src="product.image" alt="Product Image" class="object-cover w-full max-w-lg" />
+                                                            </div>
+                                                            <h3 class="text-lg font-bold" x-text="product.name"></h3>
+                                                            <div class="flex mt-2">
+                                                                <span class="font-bold w-12">Price:</span>
+                                                                <span class="font-bold">$</span>
+                                                                <span class="font-bold" x-text="product.price"></span>
+                                                            </div>
+                                                            <div class="flex mt-2">
+                                                                <span class="w-12 font-medium">SKU:</span>
+                                                                <span x-text="product.sku"></span>
+                                                            </div>
+                                                            <div class="flex">
+                                                                <span class="w-12 font-medium">Color:</span>
+                                                                <span x-text="product.customColorName"></span>
+                                                            </div>
+                                                            <div class="flex">
+                                                                <span class="w-12 font-medium">Size:</span>
+                                                                <span x-text="product.customSizeName"></span>
+                                                            </div>
+                                                            <div>
+                                                                <button @click="addToCart(product)" class="uppercase font-semibold tracking-wide bg-blue-100 text-blue-700 px-4 py-2 rounded-lg mt-2 focus:outline-none hover:bg-blue-200">Add to Cart</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+
+                                        <p x-show="!loading && filteredProducts.length === 0">No products found.</p>
+                                    </div>
+                            </div>
+                    </div>
+                    
+                </div>
+            </div>  
+        </div> 
+    </div> 
+
+
+<script>
+    document.addEventListener('alpine:init', () => {
+                Alpine.store('darkMode', false);
+                Alpine.data('dropdown', () => ({
+                    open: false,
+                    toggle() {
+                        this.open = !this.open;
+                    }
+                }));                                                  
+                Alpine.data('ecommerceApp', () => ({                
+                    savedAddresses: JSON.parse(localStorage.getItem('savedAddresses')) || [],
+                    savedBillingAddresses: JSON.parse(localStorage.getItem('savedBillingAddresses')) || [],
+                    selectedShippingAddressIndex: null,
+                    selectedBillingAddressIndex: null,
+                    addNewShippingAddress: false,
+                    addNewBillingAddress: false,
+                    shippingAddress: {
+                        name: '',
+                        address1: '',
+                        address2: '',
+                        city: '',
+                        state: '',
+                        zip: '',
+                        email: ''
+                    },
+                    sameAsShipping: false,                    
+                    shippingMethod: 'fixed',
+                    paymentMethod: 'check',
+                    modalVisible: false,
+                    activeTab: 0,
+                    loading: true,
+                    products: [],
+                    showSaleOnly: false,
+                    filteredProducts: [],
+                    gridView: true,
+                    searchQuery: '',
+                    selectedColors: [],
+                    selectedSizes: [],
+                    priceMin: 0,
+                    priceMax: 1000,
+                    sortBy: '',
+                    categoryId: 41,
+                    cart: Alpine.$persist([]).as('cart'),
+                    baseUrl: 'http://10.0.101.114/mayur-patel/pub/',
+                    token: '3pigh4vzytofsf316wg4rf628v3c6wev',
+                    customColorMapping: {},
+                    customSizeMapping: {},
+                    couponCode: '',
+                    couponDiscount: 0,
+                    couponError: false,
+                    countries: [], // List of countries
+                    states: [], // List of states for the selected country
+                    selectedCountry: '', // Currently selected country
+                    selectedState: '', // Currently selected state
+                    currentIndex: 0,
+            productsPerSlide: 1, // Adjust based on your layout
+            filteredProducts: [
+                /* Add your product data here or fetch dynamically */
+            ],
+            next() {
+                this.currentIndex =
+                    (this.currentIndex + 1) % this.filteredProducts.length;
+            },
+            prev() {
+                this.currentIndex =
+                    (this.currentIndex - 1 + this.filteredProducts.length) %
+                    this.filteredProducts.length;
+            },
+            // addToCart(product) {
+            //     // Implement your add-to-cart logic here
+            //     console.log('Adding to cart:', product);
+            // },
+                    init() {
+                        this.fetchCustomColorMapping();
+                        this.fetchCustomSizeMapping();
+                        this.getProductsByCategory();
+                        this.fetchCountries();
+                    },
+                    billingAddress: {
+                        name: '',
+                        address1: '',
+                        address2: '',
+                        city: '',
+                        state: '',
+                        zip: '',
+                        email: ''
+                    },
+                    get shippingCost() {
+                        return this.shippingMethod === 'fixed' ? '$5.00' : 'Calculated at actual';
+                    },
+                    get totalCost() {
+                        const subtotal = this.calculateGrandTotal(); 
+                        return this.shippingMethod === 'fixed' 
+                            ? `$${(subtotal + 5).toFixed(2)}` 
+                            : `$${subtotal.toFixed(2)} + Shipping`; 
+                    },
+                    removeCouponCode() {
+                        this.couponCode = '';
+                        this.couponDiscount = 0;
+                        this.couponError = false;
+                    },                
+                    saveShippingAddress() {
+                        this.savedAddresses.push({ ...this.shippingAddress });
+                        localStorage.setItem('savedAddresses', JSON.stringify(this.savedAddresses));
+                        this.addNewShippingAddress = false;
+                        this.selectedShippingAddressIndex = this.savedAddresses.length - 1;
+                        this.resetShippingAddress();
+                    },
+                    saveBillingAddress() {
+                        this.savedBillingAddresses.push({ ...this.billingAddress });
+                        localStorage.setItem('savedBillingAddresses', JSON.stringify(this.savedBillingAddresses));
+                        this.addNewBillingAddress = false;
+                        this.selectedBillingAddressIndex = this.savedBillingAddresses.length - 1;
+                        this.resetBillingAddress();
+                    },
+                    resetShippingAddress() {
+                        this.shippingAddress = {
+                            name: '',
+                            address1: '',
+                            address2: '',
+                            city: '',
+                            state: '',
+                            zip: '',
+                            email: ''
+                        };
+                    },
+                    resetBillingAddress() {
+                        this.billingAddress = {
+                            name: '',
+                            address1: '',
+                            address2: '',
+                            city: '',
+                            state: '',
+                            zip: '',
+                            email: ''
+                        };
+                    },
+                    copyAddress() {
+                        if (this.selectedShippingAddressIndex !== null) {
+                            const selectedAddress = this.savedAddresses[this.selectedShippingAddressIndex];
+                            this.billingAddress = { ...selectedAddress };
+                        }
+                    },                   
+                    async fetchCustomColorMapping() {
+                        try {
+                            const response = await fetch(`${this.baseUrl}rest/V1/products/attributes/customcolor/options`, {
+                                headers: {
+                                    'Authorization': `Bearer ${this.token}`
+                                }
+                            });
+                            const data = await response.json();
+                            const colorMapping = {};
+                            data.forEach(option => {
+                                if (option.value && option.label) {
+                                    colorMapping[option.value] = option.label;
+                                }
+                            });
+                            this.customColorMapping = colorMapping;
+                        } catch (error) {
+                            console.error('Error fetching custom color mapping:', error);
+                        }
+                    },
+                    async fetchCustomSizeMapping() {
+                        try {
+                            const response = await fetch(`${this.baseUrl}rest/V1/products/attributes/customsize/options`, {
+                                headers: {
+                                    'Authorization': `Bearer ${this.token}`
+                                }
+                            });
+                            const data = await response.json();
+                            const sizeMapping = {};
+                            data.forEach(option => {
+                                if (option.value && option.label) {
+                                    sizeMapping[option.value] = option.label;
+                                }
+                            });
+                            this.customSizeMapping = sizeMapping;
+                        } catch (error) {
+                            console.error('Error fetching custom size mapping:', error);
+                        }
+                    },
+                    async getProductsByCategory() {
+                        try {
+                            const categoryUrl = `${this.baseUrl}/rest/V1/categories/${this.categoryId}/products`;
+                            const categoryResponse = await fetch(categoryUrl, {
+                                headers: {
+                                    'Authorization': `Bearer ${this.token}`
+                                }
+                            });
+                            const productSkus = await categoryResponse.json();
+                            await this.fetchProductDetails(productSkus);
+                        } catch (error) {
+                            console.error('Error fetching products by category:', error);
+                        }
+                        this.applyFilters();
+                    },
+                    async fetchProductDetails(productSkus) {
+                        try {
+                            const productDetails = await Promise.all(productSkus.map(async (product) => {
+                                const productUrl = `${this.baseUrl}/rest/V1/products/${product.sku}`;
+                                const productResponse = await fetch(productUrl, {
+                                    headers: {
+                                        'Authorization': `Bearer ${this.token}`
+                                    }
+                                });
+                                const productDetail = await productResponse.json();
+                                return {
+                                    id: productDetail.id,
+                                    price: productDetail.price,
+                                    name: productDetail.name,
+                                    sku: productDetail.sku,
+                                    image: this.getProductImageUrl(productDetail),
+                                    customColorName: this.getCustomColorName(productDetail),
+                                    isOnSale: this.isProductOnSale(productDetail),
+                                    customSizeName: this.getCustomSizeName(productDetail)
+                                };
+                            }));
+                            this.products = productDetails;
+                            this.filteredProducts = productDetails;
+                            this.applyFilters();
+                        } catch (error) {
+                            console.error('Error fetching product details:', error);
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+                    applyFilters() {
+                        this.filteredProducts = this.products.filter(product => {
+                            if (this.searchQuery && !product.name.toLowerCase().includes(this.searchQuery.toLowerCase()) && !product.sku.toLowerCase().includes(this.searchQuery.toLowerCase())) {
+                                return false;
+                            }
+                            if (this.selectedColors.length && !this.selectedColors.includes(Object.keys(this.customColorMapping).find(key => this.customColorMapping[key] === product.customColorName))) {
+                                return false;
+                            }
+                            if (this.selectedSizes.length && !this.selectedSizes.includes(Object.keys(this.customSizeMapping).find(key => this.customSizeMapping[key] === product.customSizeName))) {
+                                return false;
+                            }
+                            if (this.showSaleOnly && !product.isOnSale) {
+                                return false;
+                            }
+                            if (product.price < this.priceMin || product.price > this.priceMax) {
+                                return false;
+                            }                        
+                            return true;
+                        });
+                        this.applySorting();
+                    },
+                    applySorting() {
+                        switch (this.sortBy) {
+                            case 'name-asc':
+                                this.filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
+                                break;
+                            case 'name-desc':
+                                this.filteredProducts.sort((a, b) => b.name.localeCompare(a.name));
+                                break;
+                            case 'price-low-high':
+                                this.filteredProducts.sort((a, b) => a.price - b.price);
+                                break;
+                            case 'price-high-low':
+                                this.filteredProducts.sort((a, b) => b.price - a.price);
+                                break;
+                            default:
+                                break;
+                        }
+                    },
+                    removeFilter(filterKey, value = null) {
+                        if (value) {
+                            this[filterKey] = this[filterKey].filter(item => item !== value);
+                        } else {
+                            this[filterKey] = '';
+                        }
+                        this.applyFilters();
+                    },
+                    removeAllFilters() {
+                        this.searchQuery = '';
+                        this.selectedColors = [];
+                        this.selectedSizes = [];
+                        this.priceMin = 0;
+                        this.priceMax = 1000;
+                        this.showSaleOnly = false;
+                        this.applyFilters();
+                    },
+                    hasActiveFilters() {
+                        return this.searchQuery || this.selectedColors.length || this.selectedSizes.length || this.priceMin || this.priceMax;                    
+                    },
+                    getProductImageUrl(productDetail) {
+                        const imagePath = productDetail.media_gallery_entries.length > 0 ? productDetail.media_gallery_entries[0].file : 'placeholder.jpg';
+                        return `${this.baseUrl}media/catalog/product/cache/c7fe3448dd3a9867d76b4ef511ce9c2d${imagePath}`;
+                    },
+                    getCustomColorName(productDetail) {
+                        const customColorAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'customcolor');
+                        const customColorValue = customColorAttribute ? customColorAttribute.value : null;
+                        return customColorValue ? this.customColorMapping[customColorValue] || 'Unknown Color' : 'N/A';
+                    },
+                    getCustomSizeName(productDetail) {
+                        const customSizeAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'customsize');
+                        const customSizeValue = customSizeAttribute ? customSizeAttribute.value : null;
+                        return customSizeValue ? this.customSizeMapping[customSizeValue] || 'Unknown Size' : 'N/A';
+                    },
+                    isProductOnSale(productDetail) {                    
+                        const saleAttribute = productDetail.custom_attributes.find(attr => attr.attribute_code === 'sale');
+                        return saleAttribute ? saleAttribute.value === '1' : false;
+                    },
+                    addToCart(product) {   
+                        const existingProduct = this.cart.find(item => item.sku === product.sku);
+                        if (existingProduct) {
+                            existingProduct.quantity += 1;
+                        } else {
+                            this.cart.push({...product, quantity: 1});
+                        }                    
+                        this.updateCartLabel();                 
+                        console.log('Adding To Cart:', product);
+                        console.log('Current Cart:', this.cart);
+                        console.log('Total Quantity:', totalQuantity);
+                    },
+                    removeFromCart(index) {
+                        this.cart.splice(index, 1);
+                        this.updateCartLabel();
+                    },
+                    updateQuantity(index, newQuantity) {
+                        if (newQuantity <= 0) {
+                            this.removeFromCart(index);
+                        } else {
+                            this.cart[index].quantity = newQuantity;
+                        }
+                        this.updateCartLabel();
+                    },
+                    updateCart() {
+                        this.updateCartLabel();
+                    },
+                    updateCartLabel() {
+                        const element = document.querySelector('#cart-label');                    
+                        const totalQuantity = this.cart.reduce((total, item) => total + item.quantity, 0); // Calculate total quantity
+                        if (totalQuantity === 0) {
+                            element.classList.add("hidden");
+                        } else {
+                            element.classList.remove("hidden");
+                            element.textContent = totalQuantity; // Update the cart label with total quantity
+                        }
+                        console.log('Current Cart:', this.cart);
+                        console.log('Total Quantity:', totalQuantity);
+                    },
+                    calculateTax() {
+                        return this.cart.reduce((total, product) => {
+                            if (product.sku === 'TEST2') {
+                                return total + product.price * product.quantity * 0.1;
+                            }
+                            return total;
+                        }, 0);
+                    },
+                    calculateColorDiscount() {
+                        return this.cart.reduce((total, product) => {
+                            if (['yellow', 'green'].includes(this.getColorName(product.color).toLowerCase())) {
+                                return total + product.price * product.quantity * 0.05;
+                            }
+                            return total;
+                        }, 0);
+                    },
+                    getColorName(colorId) {
+                        const color = this.colors.find(c => c.id === colorId);
+                        return color ? color.name : 'Unknown';
+                    },
+                    getSizeName(sizeId) {
+                        const size = this.sizes.find(s => s.id === sizeId);
+                        return size ? size.name : 'Unknown';
+                    },               
+                    applyCouponCode() {
+                        if (this.couponCode === 'FLAT10') {
+                            this.couponDiscount = this.calculateSubtotal() * 0.1;
+                            this.couponError = false;
+                        } else if (this.couponCode === 'FLAT20') {
+                            this.couponDiscount = this.calculateSubtotal() * 0.2;
+                            this.couponError = false;
+                        } else if (this.couponCode === 'FLAT50') {
+                            this.couponDiscount = 50;
+                            this.couponError = false;
+                        } else {
+                            this.couponDiscount = 0;
+                            this.couponError = true;
+                        }
+                    },
+                    processToCheckout() {
+                        this.activeTab = 2;  
+                    },                
+                    validation() {
+                        if (/^\d*$/.test(this.minprice)) {
+                            if (this.minprice > this.max) {
+                                this.minprice = 950;
+                            }
+                            if (this.minprice < this.min) {
+                                this.minprice = this.min;
+                            }
+                        } else {
+                            this.minprice = 0;
+                        }
+                        if (/^\d*$/.test(this.maxprice)) {
+                            if (this.maxprice > this.max) {
+                                this.maxprice = this.max;
+                            }
+                            if (this.maxprice < this.min) {
+                                this.maxprice = 150;
+                            }
+                        } else {
+                            this.maxprice = 1000;
+                        }
+                    },
+                    calculateSubtotal() {
+                        return this.cart.reduce((total, product) => total + product.price * product.quantity, 0);
+                    },
+                    calculateGrandTotal() {                                                      
+                        return this.calculateSubtotal() - this.couponDiscount;                    
+                    },                    
+                    fetchCountries() {
+                        fetch('http://10.0.101.114/mayur-patel/pub/rest/V1/directory/countries')
+                            .then((response) => response.json())
+                            .then((data) => {
+                                this.countries = data;
+                            })
+                            .catch((error) => console.error('Error fetching countries:', error));
+                    },
+                    fetchStates() {
+                        // Find the selected country
+                        const country = this.countries.find((c) => c.id === this.selectedCountry);
+                        if (country && country.available_regions) {
+                            this.states = country.available_regions;
+                        } else {
+                            this.states = []; // Clear states if no regions available
+                        }
+                    },
+                    async placeOrder() {
+                        console.log('Place order button clicked');
+                        if (this.selectedShippingAddress !== null && (this.sameAsShipping || this.selectedBillingAddress !== null)) {
+                            const orderItems = this.cart.map(product => ({
+                                sku: product.sku,
+                                name: product.name,
+                                price: product.price,
+                                qty_ordered: product.quantity,
+                            }));
+                            const orderData = {
+                                entity: {
+                                    base_currency_code: "USD",
+                                    customer_email: "customer@example.com", 
+                                    customer_firstname: "John", 
+                                    customer_lastname: "Doe", 
+                                    is_virtual: 0,
+                                    order_currency_code: "USD",
+                                    shipping_description: this.shippingMethod === 'fixed' ? "Flat Rate - Fixed" : "Table Top - Based on weight",
+                                    items: orderItems,
+                                    billing_address: {
+                                        address_type: "billing",
+                                        city: this.billingAddresses[this.selectedBillingAddress].city,
+                                        country_id: "US",
+                                        firstname: this.billingAddresses[this.selectedBillingAddress].firstName,
+                                        lastname: this.billingAddresses[this.selectedBillingAddress].lastName,
+                                        postcode: this.billingAddresses[this.selectedBillingAddress].zip,
+                                        region: "Some Region", 
+                                        street: [this.billingAddresses[this.selectedBillingAddress].address],
+                                        telephone: "1234567890" 
+                                    },
+                                    payment: {                                   
+                                        "method": "checkmo",                                    
+                                        "additional_information": []                                   
+                                    },
+                                    extension_attributes: {
+                                        shipping_assignments: [{
+                                            shipping: {
+                                                address: {
+                                                    address_type: "shipping",
+                                                    city: this.shippingAddresses[this.selectedShippingAddress].city,
+                                                    country_id: "US",
+                                                    firstname: this.shippingAddresses[this.selectedShippingAddress].firstName,
+                                                    lastname: this.shippingAddresses[this.selectedShippingAddress].lastName,
+                                                    postcode: this.shippingAddresses[this.selectedShippingAddress].zip,
+                                                    region: "Some Region", 
+                                                    street: [this.shippingAddresses[this.selectedShippingAddress].address],
+                                                    telephone: "1234567890"
+                                                },
+                                                method: this.shippingMethod === 'fixed' ? "flatrate_flatrate" : "tabletop_flatrate"
+                                            },                                        
+                                            items: orderItems
+                                        }]
+                                    }
+                                }
+                            };
+                            try {                            
+                                const response = await fetch(`${this.baseUrl}rest/V1/orders`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${this.token}`
+                                    },
+                                    body: JSON.stringify(orderData)                                
+                                });
+                                if (!response.ok) {
+                                    const errorData = await response.json();
+                                    throw new Error(`Error: ${errorData.message || 'Unknown error'}`);
+                                }
+                                const data = await response.json();
+                                console.log('Order placed successfully:', data);
+                                alert('Order placed successfully!');
+                                this.cart = [];
+                                this.updateCartLabel();
+                            } catch (error) {
+                                console.error('Error placing order:', error);
+                                alert('There was an error placing your order: ' + error.message);
+                            }
+                        } else {
+                            alert('Please select a shipping and billing address.');
+                        }
+                    }                
+                }));       
+    });  
+</script>  
+<style>
+    .newdemo-index-index .columns {
+        display: block;
+    }
+    .newdemo-index-index .footer { 
+        display:none;
+    }
+    .range-slider {
+        width: 100%;
+        text-align: center;
+        position: relative;
+        margin-bottom:30px;
+    }
+    .range-slider .rangeValues {
+        display: block;
+    }
+    .range-slider input[type=range] {
+        -webkit-appearance: none;
+        border: 1px solid white;
+        width: 100%;
+        position: absolute;
+        left: 0;
+    }
+    .range-slider input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 5px;
+        background: #ddd;
+        border: none;
+        border-radius: 3px;
+    }
+    .range-slider input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        border: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: #21c1ff;
+        margin-top: -4px;
+        cursor: pointer;
+        position: relative;
+        z-index: 1;
+    }
+    .range-slider input[type=range]:focus {
+        outline: none;
+    }
+    .range-slider input[type=range]:focus::-webkit-slider-runnable-track {
+        background: #ccc;
+    }
+    .range-slider input[type=range]::-moz-range-track {
+        width: 100%;
+        height: 5px;
+        background: #ddd;
+        border: none;
+        border-radius: 3px;
+    }
+    .range-slider input[type=range]::-moz-range-thumb {
+        border: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: blue;
+    }
+    .range-slider input[type=range]:-moz-focusring {
+        outline: 1px solid white;
+        outline-offset: -1px;
+    }
+    .range-slider input[type=range]::-ms-track {
+        width: 100%;
+        height: 5px;	
+        background: transparent;	
+        border-color: transparent;
+        border-width: 6px 0;	
+        color: transparent;
+        z-index: -4;
+    }
+    .range-slider input[type=range]::-ms-fill-lower {
+        background: #777;
+        border-radius: 10px;
+    }
+    .range-slider input[type=range]::-ms-fill-upper {
+        background: #ddd;
+        border-radius: 10px;
+    }
+    .range-slider input[type=range]::-ms-thumb {
+        border: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: blue;
+    }
+    .range-slider input[type=range]:focus::-ms-fill-lower {
+        background: #888;
+    }
+    .range-slider input[type=range]:focus::-ms-fill-upper {
+        background: #ccc;
+    } 
+</style>
+<script>
+    function getVals(){  
+        let parent = this.parentNode;
+        let slides = parent.getElementsByTagName("input");
+        let slide1 = parseFloat( slides[0].value );
+        let slide2 = parseFloat( slides[1].value );  
+        if( slide1 > slide2 ){ let tmp = slide2; slide2 = slide1; slide1 = tmp; }        
+        let displayElement = parent.getElementsByClassName("rangeValues")[0];
+        displayElement.innerHTML = "$" + slide1 + " - $" + slide2;
+    }
+    window.onload = function(){  
+      let sliderSections = document.getElementsByClassName("range-slider");
+      for( let x = 0; x < sliderSections.length; x++ ){
+        let sliders = sliderSections[x].getElementsByTagName("input");
+        for( let y = 0; y < sliders.length; y++ ){
+          if( sliders[y].type ==="range" ){
+            sliders[y].oninput = getVals;            
+            sliders[y].oninput();
+          }
+        }
+      }
+    }
+</script>
+<script>
+    function slider() {
+        return {
+            currentIndex: 0,
+            productsPerSlide: 1, // Adjust based on your layout
+            filteredProducts: [
+                /* Add your product data here or fetch dynamically */
+            ],
+            next() {
+                this.currentIndex =
+                    (this.currentIndex + 1) % this.filteredProducts.length;
+            },
+            prev() {
+                this.currentIndex =
+                    (this.currentIndex - 1 + this.filteredProducts.length) %
+                    this.filteredProducts.length;
+            },
+            addToCart(product) {
+                // Implement your add-to-cart logic here
+                console.log('Adding to cart:', product);
+            },
+        };
+    }
+</script>
